@@ -1,0 +1,17 @@
+{
+  "recall": 1.0,
+  "precision": 1.0,
+  "f1": 1.0,
+  "roc_auc": 1.0,
+  "feature_importances": {
+    "days_since_last_login": 0.22,
+    "assessment_participation_ratio": 0.17667725991564098,
+    "recency_penalty": 0.17666666666666667,
+    "video_watch_ratio": 0.1701304159415256,
+    "engagement_score": 0.14002185039841586,
+    "avg_completion_rate": 0.10996363545219964,
+    "streak_days": 0.0065401716255512705,
+    "forum_posts_last_30d": 0.0,
+    "participation_gap": 0.0
+  }
+}

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drop-off Saver — Student Risk Intelligence</title>
+  <meta name="description" content="ML-powered early warning system for online course dropout risk." />
+
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 1: HERO — the thesis
+       Opens with the single most important number.
+       "Every week, students disappear. This is the signal."
+  ════════════════════════════════════════════════════════════ -->
+  <section class="section section--hero" id="hero">
+    <div class="hero__bg-grid" aria-hidden="true"></div>
+
+    <div class="hero__content">
+      <p class="hero__eyebrow">Early Warning System</p>
+
+      <h1 class="hero__headline">
+        <span class="hero__headline-line" data-line="1">Students don't</span>
+        <span class="hero__headline-line hero__headline-line--accent" data-line="2">disappear.</span>
+        <span class="hero__headline-line" data-line="3">They fade.</span>
+      </h1>
+
+      <p class="hero__subhead">
+        The signal exists in the data — days since last login, completion
+        stalls, the silence before the drop. This system finds it two weeks
+        before withdrawal.
+      </p>
+
+      <div class="hero__stat-cluster" id="hero-stats">
+        <!-- Populated by app.js from predictions.json -->
+        <div class="stat-card stat-card--loading" id="stat-total">
+          <span class="stat-card__value" data-target="total">—</span>
+          <span class="stat-card__label">Students tracked</span>
+        </div>
+        <div class="stat-card stat-card--danger stat-card--loading" id="stat-risk">
+          <span class="stat-card__value" data-target="at_risk">—</span>
+          <span class="stat-card__label">At risk now</span>
+        </div>
+        <div class="stat-card stat-card--loading" id="stat-window">
+          <span class="stat-card__value">14d</span>
+          <span class="stat-card__label">Intervention window</span>
+        </div>
+      </div>
+
+      <div class="hero__scroll-cue" aria-hidden="true">
+        <span>Scroll to explore</span>
+        <div class="scroll-cue__line"></div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 2: SIGNAL — how the model reads disengagement
+  ════════════════════════════════════════════════════════════ -->
+  <section class="section section--signal" id="signal">
+    <div class="section__inner">
+      <div class="section__label" aria-hidden="true">01 — The Signal</div>
+
+      <h2 class="section__heading reveal-text">
+        Three patterns predict every dropout.
+      </h2>
+
+      <div class="signal-grid">
+
+        <div class="signal-card" data-signal="recency">
+          <div class="signal-card__icon">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="2"/>
+              <path d="M24 12v12l8 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3 class="signal-card__title">Recency drift</h3>
+          <p class="signal-card__body">
+            Login gaps compound. A student missing one week is recoverable.
+            Missing three weeks is almost always a permanent exit.
+          </p>
+          <div class="signal-card__weight">
+            <span class="signal-card__weight-label">Model weight</span>
+            <div class="signal-card__weight-bar">
+              <div class="signal-card__weight-fill" data-weight="0.38" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="signal-card" data-signal="completion">
+          <div class="signal-card__icon">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="8" y="8" width="32" height="32" rx="4" stroke="currentColor" stroke-width="2"/>
+              <path d="M16 24l6 6 10-12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3 class="signal-card__title">Completion stall</h3>
+          <p class="signal-card__body">
+            Progress doesn't stop suddenly. It slows — then freezes.
+            Average completion below 40% is the critical threshold.
+          </p>
+          <div class="signal-card__weight">
+            <span class="signal-card__weight-label">Model weight</span>
+            <div class="signal-card__weight-bar">
+              <div class="signal-card__weight-fill" data-weight="0.31" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="signal-card" data-signal="assessment">
+          <div class="signal-card__icon">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M12 36L24 12l12 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M17 28h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3 class="signal-card__title">Assessment silence</h3>
+          <p class="signal-card__body">
+            Skipping quizzes is a leading indicator, not a lagging one.
+            Students who disengage from assessments first, drop out second.
+          </p>
+          <div class="signal-card__weight">
+            <span class="signal-card__weight-label">Model weight</span>
+            <div class="signal-card__weight-bar">
+              <div class="signal-card__weight-fill" data-weight="0.22" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 3: DISTRIBUTION — risk score chart
+  ════════════════════════════════════════════════════════════ -->
+  <section class="section section--distribution" id="distribution">
+    <div class="section__inner section__inner--split">
+
+      <div class="section__copy">
+        <div class="section__label" aria-hidden="true">02 — Risk Distribution</div>
+        <h2 class="section__heading reveal-text">
+          Most students are safe.<br/>
+          A few need you now.
+        </h2>
+        <p class="section__body">
+          The model assigns each student a probability score from 0 to 1.
+          Students above the <strong>0.60 threshold</strong> are flagged for
+          intervention — prioritized by severity.
+        </p>
+        <div class="legend">
+          <div class="legend__item">
+            <span class="legend__dot legend__dot--high"></span>
+            <span>High risk  ≥ 0.75</span>
+          </div>
+          <div class="legend__item">
+            <span class="legend__dot legend__dot--medium"></span>
+            <span>Medium risk  ≥ 0.60</span>
+          </div>
+          <div class="legend__item">
+            <span class="legend__dot legend__dot--safe"></span>
+            <span>Safe  &lt; 0.60</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section__chart-wrap">
+        <canvas id="chart-distribution" role="img"
+          aria-label="Bar chart showing distribution of student risk scores"></canvas>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 4: ROSTER — the at-risk students table
+  ════════════════════════════════════════════════════════════ -->
+  <section class="section section--roster" id="roster">
+    <div class="section__inner">
+      <div class="section__label" aria-hidden="true">03 — Student Roster</div>
+      <h2 class="section__heading reveal-text">
+        The students who need intervention.
+      </h2>
+
+      <div class="roster__controls">
+        <div class="roster__filter-group" role="group" aria-label="Filter by risk level">
+          <button class="filter-btn filter-btn--active" data-filter="all">All</button>
+          <button class="filter-btn filter-btn--high" data-filter="HIGH">High</button>
+          <button class="filter-btn filter-btn--medium" data-filter="MEDIUM">Medium</button>
+        </div>
+        <div class="roster__count" id="roster-count">
+          Showing <span id="roster-visible-count">—</span> students
+        </div>
+      </div>
+
+      <div class="roster__table-wrap" role="region" aria-label="At-risk student table" tabindex="0">
+        <table class="roster__table" id="roster-table">
+          <thead>
+            <tr>
+              <th scope="col">Student ID</th>
+              <th scope="col">Risk Score</th>
+              <th scope="col">Risk Level</th>
+              <th scope="col">Top Signal</th>
+              <th scope="col">Recommended Action</th>
+            </tr>
+          </thead>
+          <tbody id="roster-tbody">
+            <!-- Populated by app.js -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 5: SYSTEM — architecture explainer
+  ════════════════════════════════════════════════════════════ -->
+  <section class="section section--system" id="system">
+    <div class="section__inner">
+      <div class="section__label" aria-hidden="true">04 — System Design</div>
+      <h2 class="section__heading reveal-text">
+        Three layers. One contract.
+      </h2>
+
+      <div class="system-flow">
+        <div class="system-node" data-node="data">
+          <div class="system-node__number" aria-hidden="true">1</div>
+          <h3 class="system-node__title">Data Layer</h3>
+          <p class="system-node__body">
+            Synthetic telemetry generated with NumPy — mimicking real EdTech
+            signals including seasonal churn and ghost-student edge cases.
+          </p>
+          <code class="system-node__tag">generator.py → students.csv</code>
+        </div>
+
+        <div class="system-connector" aria-hidden="true">
+          <div class="system-connector__line"></div>
+          <svg class="system-connector__arrow" viewBox="0 0 16 16">
+            <path d="M4 8h8M9 5l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+
+        <div class="system-node" data-node="intelligence">
+          <div class="system-node__number" aria-hidden="true">2</div>
+          <h3 class="system-node__title">Intelligence Layer</h3>
+          <p class="system-node__body">
+            Random Forest classifier trained on engineered features.
+            Recall ≥ 0.80 as the primary metric — catching dropouts matters
+            more than eliminating false alarms.
+          </p>
+          <code class="system-node__tag">model.py → model.joblib</code>
+        </div>
+
+        <div class="system-connector" aria-hidden="true">
+          <div class="system-connector__line"></div>
+          <svg class="system-connector__arrow" viewBox="0 0 16 16">
+            <path d="M4 8h8M9 5l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+
+        <div class="system-node" data-node="visualization">
+          <div class="system-node__number" aria-hidden="true">3</div>
+          <h3 class="system-node__title">Visualization Layer</h3>
+          <p class="system-node__body">
+            GSAP scroll narrative reads a single JSON contract. The frontend
+            knows nothing about Python — it only reads predictions.json.
+          </p>
+          <code class="system-node__tag">notifier.py → predictions.json</code>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       FOOTER
+  ════════════════════════════════════════════════════════════ -->
+  <footer class="footer">
+    <div class="footer__inner">
+      <p class="footer__copy">
+        Drop-off Saver — ML System Design Portfolio
+      </p>
+      <p class="footer__meta">
+        Random Forest · Scikit-Learn · GSAP · Chart.js ·
+        <span id="footer-generated-at">—</span>
+      </p>
+    </div>
+  </footer>
+
+  <!-- Tooltip for student cards -->
+  <div class="tooltip" id="tooltip" role="tooltip" aria-hidden="true">
+    <div class="tooltip__inner" id="tooltip-content"></div>
+  </div>
+
+  <!-- Chart.js -->
+<script src="js/chart.umd.min.js"></script>
+
+<!-- GSAP + ScrollTrigger -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
