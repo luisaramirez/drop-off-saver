@@ -1,6 +1,6 @@
 # SPEC.md — Passive-to-Active Drop-off Saver
 
-**Version:** 1.0.0  
+**Version:** 2.0.0  
 **Status:** Active Development  
 **Classification:** Portfolio / Public
 
@@ -119,7 +119,7 @@ requires no ML expertise to interpret.
 
 ### Phase 1 — Data Simulation & EDA
 - [ ] `generator.py` produces reproducible `students.csv`
-- [ ] Dataset includes ≥3 edge case cohorts
+- [ ] Dataset includes 5 edge case cohorts
 - [ ] EDA notebook confirms feature distributions are realistic
 
 ### Phase 2 — Model Training & Evaluation

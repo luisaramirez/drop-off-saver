@@ -4,11 +4,20 @@ generator.py — Synthetic EdTech Telemetry Factory
 Generates a reproducible students.csv that mimics real-world online course
 engagement data, including controlled edge-case cohorts.
 
+Real EdTech platforms report 15-25% dropout rates. This generator reflects
+that reality with a realistic class imbalance: ~20% at-risk, ~80% healthy.
+Realistic overlap between cohorts is introduced intentionally — if the
+boundaries were perfectly clean, any model would achieve near-perfect scores
+and the project would demonstrate nothing meaningful.
+
 Cohorts produced:
-  - "healthy"        : high engagement, low churn risk
-  - "at_risk"        : declining engagement patterns
-  - "seasonal_churn" : edge case — summer dropout spike
-  - "ghost_students" : enrolled but never active (missing data scenario)
+  - "healthy"        : 75% — high engagement, low dropout risk
+  - "struggling"     : 12% — borderline students, not yet at risk
+  - "at_risk"        : 8%  — clear disengagement signals
+  - "seasonal_churn" : 3%  — edge case: summer dropout spike
+  - "ghost_students" : 2%  — enrolled but never active (missing data)
+
+At-risk rate target: ~13% (at_risk + seasonal + ghost)
 
 Usage:
     python src/generator.py
@@ -47,25 +56,66 @@ logger = logging.getLogger(__name__)
 def _generate_healthy_cohort(rng: np.random.Generator, n: int) -> pd.DataFrame:
     """
     Students who are actively engaged. Low dropout probability.
-    Characterized by recent logins, high completion, and regular assessment
+    Characterized by recent logins, solid completion, and regular assessment
     participation.
+
+    Realistic variance is intentional: healthy students still miss days,
+    skip occasional quizzes, and have varying completion rates. A dataset
+    where every healthy student scores 0.95+ teaches the model nothing
+    useful about the boundary between safe and at-risk.
     """
     return pd.DataFrame(
         {
             "user_id": [f"STU-{uuid.uuid4().hex[:6].upper()}" for _ in range(n)],
             "cohort": "healthy",
-            # Login recency: healthy students logged in within the last week
-            "days_since_last_login": rng.integers(0, 7, size=n),
-            # Completion rate: 70–100%
-            "avg_completion_rate": rng.uniform(0.70, 1.00, size=n),
-            # Assessment participation: high engagement
-            "assessment_participation_ratio": rng.uniform(0.65, 1.00, size=n),
-            # Community activity
-            "forum_posts_last_30d": rng.integers(2, 20, size=n),
-            # Video consumption
-            "video_watch_ratio": rng.uniform(0.70, 1.00, size=n),
-            # Consecutive active days
-            "streak_days": rng.integers(7, 90, size=n),
+            # Login recency: most logged in recently, some took a short break
+            "days_since_last_login": rng.integers(0, 14, size=n),
+            # Completion rate: solid progress, not necessarily perfect
+            "avg_completion_rate": rng.uniform(0.55, 1.00, size=n),
+            # Assessment participation: engaged but not obsessive
+            "assessment_participation_ratio": rng.uniform(0.50, 1.00, size=n),
+            # Community activity: varies widely — some students lurk, some post
+            "forum_posts_last_30d": rng.integers(0, 25, size=n),
+            # Video consumption: most watch regularly
+            "video_watch_ratio": rng.uniform(0.55, 1.00, size=n),
+            # Consecutive active days: wide range is realistic
+            "streak_days": rng.integers(3, 90, size=n),
+            "is_at_risk": 0,
+        }
+    )
+
+
+def _generate_struggling_cohort(rng: np.random.Generator, n: int) -> pd.DataFrame:
+    """
+    NEW COHORT: Borderline students — not yet at risk, but showing early
+    warning signs. This is the hardest cohort for the model to classify
+    correctly, and the most important one to get right in practice.
+
+    Characteristics: moderate login gaps, stalled-but-not-zero completion,
+    inconsistent assessment participation. These students are recoverable
+    with early intervention — which is exactly the use case this system
+    is designed for.
+
+    Labelled is_at_risk=0 because they haven't crossed the threshold yet,
+    but their features will produce mid-range probability scores (0.35-0.60),
+    which is realistic — the model should be uncertain about them.
+    """
+    return pd.DataFrame(
+        {
+            "user_id": [f"STU-{uuid.uuid4().hex[:6].upper()}" for _ in range(n)],
+            "cohort": "struggling",
+            # Login gap: present but irregular — missed 1-2 weeks
+            "days_since_last_login": rng.integers(7, 21, size=n),
+            # Completion: started strong, now slowing
+            "avg_completion_rate": rng.uniform(0.30, 0.60, size=n),
+            # Assessment: attempts some but skips others
+            "assessment_participation_ratio": rng.uniform(0.25, 0.55, size=n),
+            # Forum: occasional post, mostly silent
+            "forum_posts_last_30d": rng.integers(0, 5, size=n),
+            # Video: watching less than before
+            "video_watch_ratio": rng.uniform(0.30, 0.65, size=n),
+            # Streak broken but not long ago
+            "streak_days": rng.integers(0, 14, size=n),
             "is_at_risk": 0,
         }
     )
@@ -73,26 +123,26 @@ def _generate_healthy_cohort(rng: np.random.Generator, n: int) -> pd.DataFrame:
 
 def _generate_at_risk_cohort(rng: np.random.Generator, n: int) -> pd.DataFrame:
     """
-    Students showing disengagement signals. High dropout probability.
-    Characterized by infrequent logins, stalled completion, and low
-    assessment activity.
+    Students showing clear disengagement signals. High dropout probability.
+    Characterized by extended login absence, stalled completion, and
+    assessment silence.
     """
     return pd.DataFrame(
         {
             "user_id": [f"STU-{uuid.uuid4().hex[:6].upper()}" for _ in range(n)],
             "cohort": "at_risk",
-            # Login recency: haven't logged in for 3+ weeks
+            # Login recency: gone for 3-8 weeks
             "days_since_last_login": rng.integers(21, 60, size=n),
-            # Completion rate: stalled early in the course
-            "avg_completion_rate": rng.uniform(0.05, 0.45, size=n),
-            # Assessment participation: rarely attempts quizzes
-            "assessment_participation_ratio": rng.uniform(0.0, 0.35, size=n),
-            # Forum silence
-            "forum_posts_last_30d": rng.integers(0, 3, size=n),
-            # Low video consumption
-            "video_watch_ratio": rng.uniform(0.05, 0.40, size=n),
-            # Streak broken early
-            "streak_days": rng.integers(0, 10, size=n),
+            # Completion rate: stalled early, never recovered
+            "avg_completion_rate": rng.uniform(0.03, 0.35, size=n),
+            # Assessment participation: rarely or never attempts quizzes
+            "assessment_participation_ratio": rng.uniform(0.0, 0.25, size=n),
+            # Forum: completely silent
+            "forum_posts_last_30d": rng.integers(0, 2, size=n),
+            # Video: stopped watching
+            "video_watch_ratio": rng.uniform(0.02, 0.30, size=n),
+            # Streak: broken early and never rebuilt
+            "streak_days": rng.integers(0, 5, size=n),
             "is_at_risk": 1,
         }
     )
@@ -102,23 +152,27 @@ def _generate_seasonal_churn_cohort(
     rng: np.random.Generator, n: int
 ) -> pd.DataFrame:
     """
-    Edge case: students who were previously healthy but show a sudden summer
-    drop in engagement. Moderate-to-high risk. Mimics real seasonal churn
-    patterns observed in EdTech platforms (Q3 dip).
+    Edge case: students who were previously healthy but show a sudden
+    drop in engagement. Mimics real seasonal churn patterns observed in
+    EdTech platforms (Q3 summer dip, Q1 post-holiday drop).
+
+    These students are dangerous precisely because their historical
+    engagement was good — a naive rule-based system would miss them.
     """
     return pd.DataFrame(
         {
             "user_id": [f"STU-{uuid.uuid4().hex[:6].upper()}" for _ in range(n)],
             "cohort": "seasonal_churn",
-            # Recently logged in but not as active as before
-            "days_since_last_login": rng.integers(10, 25, size=n),
-            # Was making progress, now stalled mid-course
-            "avg_completion_rate": rng.uniform(0.40, 0.65, size=n),
-            # Partially engaged — attends some assessments
-            "assessment_participation_ratio": rng.uniform(0.25, 0.55, size=n),
-            "forum_posts_last_30d": rng.integers(0, 5, size=n),
-            "video_watch_ratio": rng.uniform(0.30, 0.65, size=n),
-            "streak_days": rng.integers(0, 7, size=n),
+            # Recently logged in but activity dropping fast
+            "days_since_last_login": rng.integers(12, 28, size=n),
+            # Was making real progress, now stalled mid-course
+            "avg_completion_rate": rng.uniform(0.35, 0.60, size=n),
+            # Partially engaged — attendance becoming erratic
+            "assessment_participation_ratio": rng.uniform(0.20, 0.50, size=n),
+            "forum_posts_last_30d": rng.integers(0, 4, size=n),
+            "video_watch_ratio": rng.uniform(0.25, 0.55, size=n),
+            # Streak recently broken
+            "streak_days": rng.integers(0, 5, size=n),
             "is_at_risk": 1,
         }
     )
@@ -133,7 +187,7 @@ def _generate_ghost_students_cohort(
     in the feature engineering pipeline.
 
     These students have never established a baseline, making them a special
-    category for the model: high risk by absence of signal.
+    category: high risk by absence of signal rather than by declining signal.
     """
     df = pd.DataFrame(
         {
@@ -166,6 +220,10 @@ def _inject_noise(df: pd.DataFrame, rng: np.random.Generator) -> pd.DataFrame:
     Add small Gaussian noise to continuous features to prevent artificially
     clean decision boundaries — a common synthetic data pitfall.
 
+    Increased noise standard deviation (0.03 -> 0.05) to create more
+    realistic overlap at cohort boundaries. The model should be uncertain
+    about borderline students, not perfectly confident about every row.
+
     Clips values to valid ranges after noise injection.
     """
     continuous_cols = [
@@ -175,7 +233,7 @@ def _inject_noise(df: pd.DataFrame, rng: np.random.Generator) -> pd.DataFrame:
     ]
     for col in continuous_cols:
         if col in df.columns:
-            noise = rng.normal(0, 0.03, size=len(df))
+            noise = rng.normal(0, 0.05, size=len(df))
             df[col] = (df[col] + noise).clip(0.0, 1.0)
 
     return df
@@ -189,8 +247,12 @@ def generate_dataset(n: int = DEFAULT_N, seed: int = RANDOM_SEED) -> pd.DataFram
     """
     Orchestrates cohort generation and returns a combined, shuffled DataFrame.
 
-    Cohort split (approximate):
-      50% healthy, 30% at_risk, 12% seasonal_churn, 8% ghost
+    Cohort split — designed to match real EdTech dropout rates (~13-20%):
+      75% healthy, 12% struggling, 8% at_risk, 3% seasonal_churn, 2% ghost
+
+    The struggling cohort is labelled safe (is_at_risk=0) but produces
+    mid-range model scores — this is intentional and realistic. Not every
+    disengaged student drops out; the model should reflect that uncertainty.
 
     Args:
         n:    Total number of student records to generate.
@@ -201,21 +263,21 @@ def generate_dataset(n: int = DEFAULT_N, seed: int = RANDOM_SEED) -> pd.DataFram
     """
     rng = np.random.default_rng(seed)
 
-    n_healthy = int(n * 0.50)
-    n_at_risk = int(n * 0.30)
-    n_seasonal = int(n * 0.12)
-    n_ghost = n - n_healthy - n_at_risk - n_seasonal  # remainder
+    n_healthy   = int(n * 0.75)
+    n_struggling = int(n * 0.12)
+    n_at_risk   = int(n * 0.08)
+    n_seasonal  = int(n * 0.03)
+    n_ghost     = n - n_healthy - n_struggling - n_at_risk - n_seasonal
 
     logger.info(
-        "Generating cohorts: healthy=%d, at_risk=%d, seasonal=%d, ghost=%d",
-        n_healthy,
-        n_at_risk,
-        n_seasonal,
-        n_ghost,
+        "Generating cohorts: healthy=%d, struggling=%d, at_risk=%d, "
+        "seasonal=%d, ghost=%d",
+        n_healthy, n_struggling, n_at_risk, n_seasonal, n_ghost,
     )
 
     cohorts = [
         _generate_healthy_cohort(rng, n_healthy),
+        _generate_struggling_cohort(rng, n_struggling),
         _generate_at_risk_cohort(rng, n_at_risk),
         _generate_seasonal_churn_cohort(rng, n_seasonal),
         _generate_ghost_students_cohort(rng, n_ghost),
@@ -227,10 +289,12 @@ def generate_dataset(n: int = DEFAULT_N, seed: int = RANDOM_SEED) -> pd.DataFram
     # Shuffle to break cohort ordering that could leak into training
     df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
 
+    at_risk_rate = df["is_at_risk"].mean() * 100
     logger.info(
-        "Dataset generated: %d rows | at_risk rate: %.1f%%",
+        "Dataset generated: %d rows | at_risk rate: %.1f%% | safe rate: %.1f%%",
         len(df),
-        df["is_at_risk"].mean() * 100,
+        at_risk_rate,
+        100 - at_risk_rate,
     )
     return df
 
@@ -271,3 +335,4 @@ if __name__ == "__main__":
     save_dataset(dataset, output_path=args.out)
     print(dataset.head(10).to_string())
     print(f"\nClass distribution:\n{dataset['is_at_risk'].value_counts()}")
+    print(f"\nCohort breakdown:\n{dataset['cohort'].value_counts()}")
