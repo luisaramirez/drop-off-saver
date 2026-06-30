@@ -1,3 +1,6 @@
+# Changes log
+> Description of all changes made per each of the versions as I work on iterating the project.
+
 ---
 
 ## Version 2
