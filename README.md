@@ -171,3 +171,12 @@ dropoff-saver/
 Ensure the code is clean, well-commented, and follows PEP 8 standards, as this will be a public-facing portfolio piece.
 
 Feel free to make any changes to the suggested folder structure above, just make sure to explain/argument your updates.
+
+---
+
+## What's new in each version
+This is a summary of the changes. For more specific information, please refer to CHANGELOG.md
+
+**Version 2:** Update the generator.py, so it reflects data more realistically. Added a new cohort for struggling students and refactored the percentage for all cohorts.
+
+---
