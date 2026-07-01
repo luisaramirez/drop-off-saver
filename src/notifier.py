@@ -30,6 +30,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent))
 from features import build_feature_matrix, RAW_FEATURE_COLS
+from profiler import assign_risk_profiles
 
 logging.basicConfig(
     level=logging.INFO,
@@ -95,6 +96,13 @@ def export_predictions() -> dict:
     """
     Full prediction and export pipeline.
 
+    Adds a clustering stage between scoring and JSON export: at-risk
+    students (HIGH/MEDIUM tier) are passed to profiler.py, which assigns
+    each one to one of 3 named risk profiles based on behavioral and
+    demographic similarity. Safe students skip this stage entirely —
+    profiles are only meaningful for the population the system's
+    intervention CTA targets.
+
     Returns:
         dict: The predictions payload (also written to OUTPUT_PATH).
     """
@@ -113,6 +121,36 @@ def export_predictions() -> dict:
     X_all = full_df[feature_cols]
     risk_scores = model.predict_proba(X_all)[:, 1]
 
+    # Attach scores and tiers directly onto the DataFrame — this lets us
+    # filter to the at-risk subset with a single boolean mask, rather than
+    # juggling parallel arrays/lists by index.
+    full_df = full_df.copy()
+    full_df["risk_score"] = risk_scores
+    full_df["risk_label"] = full_df["risk_score"].apply(
+        lambda s: _assign_tier(s, RISK_THRESHOLD)
+    )
+
+    # --- Clustering stage ---
+    # Only HIGH/MEDIUM students get profiled. Splitting here means
+    # profiler.py never has to know about risk tiers — it just receives
+    # "the population to cluster" and returns it with profile columns added.
+    at_risk_mask = full_df["risk_label"].isin(["HIGH", "MEDIUM"])
+    at_risk_df = full_df[at_risk_mask]
+    safe_df = full_df[~at_risk_mask].copy()
+
+    if len(at_risk_df) > 0:
+        at_risk_df = assign_risk_profiles(at_risk_df)
+    else:
+        logger.warning("No at-risk students found — skipping clustering stage.")
+
+    # Safe students get no profile — keeps the JSON honest about what
+    # the system actually knows about them.
+    safe_df["risk_profile_label"] = None
+    safe_df["risk_profile_description"] = None
+    safe_df["risk_profile_action"] = None
+
+    full_df = pd.concat([at_risk_df, safe_df]).sort_index()
+
     # Load feature importances from metrics.json if available
     metrics_path = MODEL_PATH.parent / "metrics.json"
     feature_importances = {}
@@ -123,9 +161,9 @@ def export_predictions() -> dict:
 
     # Build per-student records
     students_output = []
-    for idx, (_, row) in enumerate(full_df.iterrows()):
-        score = float(risk_scores[idx])
-        tier = _assign_tier(score, RISK_THRESHOLD)
+    for _, row in full_df.iterrows():
+        score = float(row["risk_score"])
+        tier = row["risk_label"]
         signals = _top_signals(row, feature_importances)
 
         students_output.append(
@@ -135,6 +173,12 @@ def export_predictions() -> dict:
                 "risk_label": tier,
                 "top_signals": signals,
                 "recommended_action": INTERVENTION_RULES[tier],
+                # Risk profile fields — populated only for at-risk students
+                "risk_profile": {
+                    "label": row["risk_profile_label"],
+                    "description": row["risk_profile_description"],
+                    "suggested_strategy": row["risk_profile_action"],
+                } if row["risk_profile_label"] is not None else None,
                 # Raw features for frontend tooltip rendering
                 "features": {
                     "days_since_last_login": int(row["days_since_last_login"]),
@@ -144,6 +188,13 @@ def export_predictions() -> dict:
                     ),
                     "engagement_score": round(float(row.get("engagement_score", 0)), 3),
                 },
+                # Demographic fields for transparency on what informed the profile
+                "demographics": {
+                    "age_bracket": row.get("age_bracket"),
+                    "employment_status": row.get("employment_status"),
+                    "has_dependents": bool(row.get("has_dependents")),
+                    "device_primary": row.get("device_primary"),
+                },
             }
         )
 
@@ -151,6 +202,14 @@ def export_predictions() -> dict:
     students_output.sort(key=lambda s: s["risk_score"], reverse=True)
 
     at_risk = [s for s in students_output if s["risk_label"] in ("HIGH", "MEDIUM")]
+
+    # Summarize profile distribution for the JSON summary block — lets the
+    # frontend render a profile breakdown without recomputing it client-side
+    profile_counts: dict = {}
+    for s in at_risk:
+        label = s["risk_profile"]["label"] if s["risk_profile"] else "Unprofiled"
+        profile_counts[label] = profile_counts.get(label, 0) + 1
+
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "model_version": MODEL_VERSION,
@@ -161,6 +220,7 @@ def export_predictions() -> dict:
             "high_risk_count": sum(1 for s in students_output if s["risk_label"] == "HIGH"),
             "medium_risk_count": sum(1 for s in students_output if s["risk_label"] == "MEDIUM"),
             "safe_count": len(students_output) - len(at_risk),
+            "risk_profile_breakdown": profile_counts,
         },
         "students": students_output,
     }
@@ -170,12 +230,13 @@ def export_predictions() -> dict:
         json.dump(payload, f, indent=2)
 
     logger.info(
-        "Exported %d students → %s | High: %d | Medium: %d | Safe: %d",
+        "Exported %d students → %s | High: %d | Medium: %d | Safe: %d | Profiles: %s",
         payload["summary"]["total_students"],
         OUTPUT_PATH,
         payload["summary"]["high_risk_count"],
         payload["summary"]["medium_risk_count"],
         payload["summary"]["safe_count"],
+        profile_counts,
     )
 
     return payload
