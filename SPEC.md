@@ -1,6 +1,6 @@
 # SPEC.md — Passive-to-Active Drop-off Saver
 
-**Version:** 2.0.0  
+**Version:** 1.0.0  
 **Status:** Active Development  
 **Classification:** Portfolio / Public
 
@@ -47,7 +47,18 @@ requires no ML expertise to interpret.
 | `forum_posts_last_30d` | int | 0–50 | Community engagement proxy |
 | `video_watch_ratio` | float | 0.0–1.0 | Video content consumption |
 | `streak_days` | int | 0–90 | Consecutive active days |
+| `age_bracket` | string | {18-24, 25-34, 35-44, 45+} | Demographic context for clustering |
+| `employment_status` | string | {student, part_time, full_time, unemployed} | Demographic context for clustering |
+| `has_dependents` | bool | {True, False} | Demographic context for clustering |
+| `device_primary` | string | {mobile, desktop} | Demographic context for clustering |
 | `is_at_risk` | int | {0, 1} | Ground truth label |
+
+Demographic fields are NOT used as inputs to the classifier (`model.py`).
+They are reserved exclusively for the clustering stage (`profiler.py`),
+which groups already-flagged at-risk students into behavioral profiles.
+Keeping demographics out of the classifier avoids the model learning
+spurious correlations between protected-adjacent attributes and dropout
+risk — see `docs/architecture.md` for the full reasoning.
 
 ### Output Schema (`predictions.json`)
 
@@ -59,7 +70,14 @@ requires no ML expertise to interpret.
   "summary": {
     "total_students": 500,
     "at_risk_count": 87,
-    "safe_count": 413
+    "high_risk_count": 58,
+    "medium_risk_count": 9,
+    "safe_count": 413,
+    "risk_profile_breakdown": {
+      "Time-Constrained": 19,
+      "Disengaged Learner": 27,
+      "Quiet Decliner": 21
+    }
   },
   "students": [
     {
@@ -67,11 +85,54 @@ requires no ML expertise to interpret.
       "risk_score": 0.82,
       "risk_label": "HIGH",
       "top_signals": ["days_since_last_login", "avg_completion_rate"],
-      "recommended_action": "Send re-engagement email within 48h"
+      "recommended_action": "Send re-engagement email within 48h",
+      "risk_profile": {
+        "label": "Time-Constrained",
+        "description": "Engagement drops driven by availability, not motivation.",
+        "suggested_strategy": "Offer flexible deadline extensions and async catch-up."
+      },
+      "demographics": {
+        "age_bracket": "25-34",
+        "employment_status": "full_time",
+        "has_dependents": false,
+        "device_primary": "desktop"
+      }
     }
   ]
 }
 ```
+
+`risk_profile` is `null` for students with `risk_label: "LOW"` — profiling
+only runs on the at-risk population, by design (see §2 Scope).
+
+---
+
+## 3.5 Risk Profiling (K-Means Clustering)
+
+A second, unsupervised stage runs after classification: at-risk students
+(HIGH or MEDIUM tier) are clustered into exactly 3 behavioral/demographic
+profiles using K-Means. This answers a different question than the
+classifier — not "is this student at risk" but "what kind of at-risk
+student is this, and what intervention fits."
+
+### Profile definitions
+
+| Profile | Narrative | Strategy |
+|---|---|---|
+| Time-Constrained | Availability-driven disengagement — full-time workers, parents | Flexible deadlines, async support |
+| Disengaged Learner | Passive consumption without active participation — often younger, mobile-primary | Lightweight gamified nudges |
+| Quiet Decliner | Previously engaged, recent sudden drop — high investment, high recoverability | Immediate direct outreach |
+
+Cluster-to-profile matching is rule-based on centroid characteristics
+(see `profiler.py:_match_clusters_to_profiles`), not hardcoded by cluster
+index — K-Means cluster labels are arbitrary and can reorder between runs.
+
+### Acceptance criteria
+
+- [ ] Clustering runs only on HIGH/MEDIUM tier students, never the full population
+- [ ] Every at-risk student receives exactly one profile label
+- [ ] Profile assignment is deterministic for a fixed `RANDOM_SEED`
+- [ ] System degrades gracefully (fallback profile) when fewer than 3 at-risk students exist
 
 ---
 
@@ -119,7 +180,7 @@ requires no ML expertise to interpret.
 
 ### Phase 1 — Data Simulation & EDA
 - [ ] `generator.py` produces reproducible `students.csv`
-- [ ] Dataset includes 5 edge case cohorts
+- [ ] Dataset includes ≥3 edge case cohorts
 - [ ] EDA notebook confirms feature distributions are realistic
 
 ### Phase 2 — Model Training & Evaluation

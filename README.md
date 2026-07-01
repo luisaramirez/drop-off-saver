@@ -37,6 +37,7 @@ dropoff-saver/
 │   ├── generator.py       # Synthetic data factory
 │   ├── features.py        # Feature engineering pipeline
 │   ├── model.py           # Training, evaluation, serialization
+│   ├── profiler.py        # At-risk clustering based on demographics
 │   └── notifier.py        # Intervention trigger + JSON export
 │
 ├── notebooks/             # Exploratory and explanatory analysis
@@ -178,5 +179,7 @@ Feel free to make any changes to the suggested folder structure above, just make
 This is a summary of the changes. For more specific information, please refer to CHANGELOG.md
 
 **Version 2:** Update the generator.py, so it reflects data more realistically. Added a new cohort for struggling students and refactored the percentage for all cohorts.
+
+**Version 3:** A profiling layer was added to the program's logic, to cluster at-risk students into actionable intervention groups with custom retention plans.
 
 ---
