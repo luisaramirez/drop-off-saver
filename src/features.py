@@ -36,6 +36,18 @@ TARGET_COL = "is_at_risk"
 TEST_SIZE = float(os.getenv("TEST_SIZE", 0.20))
 RANDOM_SEED = int(os.getenv("RANDOM_SEED", 42))
 
+# Demographic columns carried through from students.csv. These are NOT used
+# by the classifier (model.py) — they're reserved for profiler.py, which
+# clusters at-risk students by demographic + behavioral similarity. Declared
+# here, alongside RAW_FEATURE_COLS, so both modules reference one source
+# of truth for column names instead of hardcoding strings independently.
+DEMOGRAPHIC_COLS = [
+    "age_bracket",
+    "employment_status",
+    "has_dependents",
+    "device_primary",
+]
+
 
 # ---------------------------------------------------------------------------
 # Imputation

@@ -2,10 +2,11 @@
 generator.py — Synthetic EdTech Telemetry Factory
 ==================================================
 Generates a reproducible students.csv that mimics real-world online course
-engagement data, including controlled edge-case cohorts.
+engagement data, including controlled edge-case cohorts and demographic
+context used downstream for risk-profile clustering.
 
 Real EdTech platforms report 15-25% dropout rates. This generator reflects
-that reality with a realistic class imbalance: ~20% at-risk, ~80% healthy.
+that reality with a realistic class imbalance: ~13% at-risk, ~87% healthy.
 Realistic overlap between cohorts is introduced intentionally — if the
 boundaries were perfectly clean, any model would achieve near-perfect scores
 and the project would demonstrate nothing meaningful.
@@ -18,6 +19,21 @@ Cohorts produced:
   - "ghost_students" : 2%  — enrolled but never active (missing data)
 
 At-risk rate target: ~13% (at_risk + seasonal + ghost)
+
+Demographic features (new):
+  - age_bracket        : 18-24, 25-34, 35-44, 45+
+  - employment_status  : student, part_time, full_time, unemployed
+  - has_dependents     : boolean
+  - device_primary     : mobile, desktop
+
+Demographics are sampled with cohort-specific probability weights rather
+than uniformly at random. This matters: a uniform random assignment would
+carry no real signal, and any downstream clustering on top of it would be
+discovering noise, not patterns. The weights encode plausible real-world
+correlations — e.g. seasonal_churn skews toward full-time employment,
+matching the "previously engaged, then life got busy" narrative. These are
+modeling assumptions, not measured facts, and should be described as such
+in any write-up of this project.
 
 Usage:
     python src/generator.py
@@ -47,6 +63,88 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Demographic value spaces
+# ---------------------------------------------------------------------------
+AGE_BRACKETS = ["18-24", "25-34", "35-44", "45+"]
+EMPLOYMENT_STATUSES = ["student", "part_time", "full_time", "unemployed"]
+DEVICE_TYPES = ["mobile", "desktop"]
+
+# Per-cohort sampling weights for demographics. Each list of probabilities
+# must sum to 1.0 and align positionally with the value space above.
+#
+# These weights are modeling assumptions encoding plausible narratives per
+# cohort, not measured real-world statistics. They exist to give downstream
+# clustering something structured to find, rather than pure noise.
+DEMOGRAPHIC_WEIGHTS = {
+    "healthy": {
+        "age_bracket": [0.35, 0.35, 0.20, 0.10],
+        "employment_status": [0.40, 0.25, 0.25, 0.10],
+        "has_dependents": 0.20,  # P(True)
+        "device_primary": [0.30, 0.70],  # [mobile, desktop]
+    },
+    "struggling": {
+        "age_bracket": [0.30, 0.30, 0.25, 0.15],
+        "employment_status": [0.25, 0.30, 0.30, 0.15],
+        "has_dependents": 0.30,
+        "device_primary": [0.45, 0.55],
+    },
+    "at_risk": {
+        # Skews younger + mobile-primary + lower employment stability —
+        # the "disengaged learner" narrative
+        "age_bracket": [0.45, 0.30, 0.15, 0.10],
+        "employment_status": [0.30, 0.20, 0.20, 0.30],
+        "has_dependents": 0.15,
+        "device_primary": [0.60, 0.40],
+    },
+    "seasonal_churn": {
+        # Skews toward full-time employment + dependents — the
+        # "previously engaged, then life got busy" narrative
+        "age_bracket": [0.10, 0.30, 0.35, 0.25],
+        "employment_status": [0.05, 0.20, 0.60, 0.15],
+        "has_dependents": 0.55,
+        "device_primary": [0.35, 0.65],
+    },
+    "ghost": {
+        # No strong narrative — these students never engaged enough to
+        # form a clear behavioral pattern, so weights stay close to uniform
+        "age_bracket": [0.25, 0.25, 0.25, 0.25],
+        "employment_status": [0.25, 0.25, 0.25, 0.25],
+        "has_dependents": 0.25,
+        "device_primary": [0.50, 0.50],
+    },
+}
+
+
+def _sample_demographics(
+    rng: np.random.Generator, n: int, cohort: str
+) -> dict:
+    """
+    Samples demographic columns for n students using the cohort-specific
+    weights defined in DEMOGRAPHIC_WEIGHTS.
+
+    Args:
+        rng:    Shared random generator (preserves reproducibility)
+        n:      Number of students to sample for
+        cohort: One of the keys in DEMOGRAPHIC_WEIGHTS
+
+    Returns:
+        dict of column_name -> np.ndarray, ready to merge into a DataFrame
+    """
+    weights = DEMOGRAPHIC_WEIGHTS[cohort]
+
+    return {
+        "age_bracket": rng.choice(AGE_BRACKETS, size=n, p=weights["age_bracket"]),
+        "employment_status": rng.choice(
+            EMPLOYMENT_STATUSES, size=n, p=weights["employment_status"]
+        ),
+        "has_dependents": rng.random(size=n) < weights["has_dependents"],
+        "device_primary": rng.choice(
+            DEVICE_TYPES, size=n, p=weights["device_primary"]
+        ),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -212,6 +310,48 @@ def _generate_ghost_students_cohort(
 
 
 # ---------------------------------------------------------------------------
+# Demographic attachment
+# ---------------------------------------------------------------------------
+
+def _attach_demographics(df: pd.DataFrame, rng: np.random.Generator) -> pd.DataFrame:
+    """
+    Adds demographic columns to the combined cohort DataFrame, sampling
+    per-row using the cohort each row already belongs to.
+
+    This runs AFTER cohorts are concatenated (not inside each cohort
+    generator) so the demographic sampling logic lives in exactly one
+    place, regardless of how many cohorts exist.
+
+    Args:
+        df:  Combined DataFrame with a 'cohort' column already present
+        rng: Shared random generator
+
+    Returns:
+        pd.DataFrame with age_bracket, employment_status, has_dependents,
+        and device_primary columns appended.
+    """
+    df = df.copy()
+
+    # Pre-allocate output columns
+    df["age_bracket"] = ""
+    df["employment_status"] = ""
+    df["has_dependents"] = False
+    df["device_primary"] = ""
+
+    for cohort_name in df["cohort"].unique():
+        mask = df["cohort"] == cohort_name
+        n_rows = mask.sum()
+        demo = _sample_demographics(rng, n_rows, cohort_name)
+
+        df.loc[mask, "age_bracket"] = demo["age_bracket"]
+        df.loc[mask, "employment_status"] = demo["employment_status"]
+        df.loc[mask, "has_dependents"] = demo["has_dependents"]
+        df.loc[mask, "device_primary"] = demo["device_primary"]
+
+    return df
+
+
+# ---------------------------------------------------------------------------
 # Noise injection
 # ---------------------------------------------------------------------------
 
@@ -284,6 +424,7 @@ def generate_dataset(n: int = DEFAULT_N, seed: int = RANDOM_SEED) -> pd.DataFram
     ]
 
     df = pd.concat(cohorts, ignore_index=True)
+    df = _attach_demographics(df, rng)
     df = _inject_noise(df, rng)
 
     # Shuffle to break cohort ordering that could leak into training

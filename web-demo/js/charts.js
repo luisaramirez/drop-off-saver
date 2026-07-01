@@ -1,16 +1,19 @@
 /**
  * charts.js — Chart.js Rendering Module
  * ======================================
- * Consumes the predictions payload (passed from app.js) and renders
- * the risk score distribution histogram.
+ * Consumes the predictions payload (passed from app.js) and renders two
+ * charts: the risk score distribution histogram, and the risk profile
+ * breakdown (count of at-risk students per behavioral cluster).
  *
  * Exposed globally as window.renderCharts(data) so app.js can call it
  * after data is loaded, regardless of script load order.
  *
  * Design choices:
- *   - Bar chart binned into 0.1 buckets (0.0–0.1, 0.1–0.2, ... 0.9–1.0)
- *   - Color-coded bars: green (safe), yellow (medium), red (high)
- *   - Threshold line at the configurable RISK_THRESHOLD from the JSON
+ *   - Distribution: bar chart binned into 0.1 buckets (0.0–0.1, ... 0.9–1.0)
+ *     Color-coded bars: green (safe), yellow (medium), red (high)
+ *     Threshold line at the configurable RISK_THRESHOLD from the JSON
+ *   - Profiles: horizontal bar chart, one bar per cluster, colored to
+ *     match the profile badge palette used in the roster table
  *   - No animation conflicts with GSAP — Chart.js handles its own canvas
  */
 
@@ -26,7 +29,20 @@ const C = {
   amber:  "#f5a623",
   text:   "#8a8f9a",
   bg:     "#141518",
+  violet: "#9b8cf2",
+  cyan:   "#5ec9e8",
+  rose:   "#f28cb8",
 };
+
+// Maps a risk_profile_breakdown key (from predictions.json summary) to
+// its display color. Falls back to muted grey for any unrecognized label
+// (e.g. "Unprofiled" or profiler.py's "Needs Review" fallback).
+const PROFILE_COLOR_MAP = {
+  "Time-Constrained":   C.violet,
+  "Disengaged Learner": C.cyan,
+  "Quiet Decliner":     C.rose,
+};
+
 
 /**
  * Bins an array of risk scores into 10 buckets (0.0–1.0 in 0.1 steps).
@@ -186,10 +202,96 @@ function thresholdLinePlugin(threshold, labels) {
   };
 }
 
+/**
+ * Renders the risk profile breakdown as a horizontal bar chart onto
+ * #chart-profiles. Reads directly from data.summary.risk_profile_breakdown,
+ * which notifier.py computes server-side — no client-side aggregation
+ * of the student list needed here.
+ *
+ * @param {object} data - Full predictions.json payload
+ */
+function renderProfileChart(data) {
+  const canvas = document.getElementById("chart-profiles");
+  if (!canvas) return;
+
+  const breakdown = data.summary.risk_profile_breakdown || {};
+  const labels = Object.keys(breakdown);
+  const counts = Object.values(breakdown);
+  const colors = labels.map((label) => PROFILE_COLOR_MAP[label] || C.muted);
+
+  if (labels.length === 0) {
+    // No at-risk students were profiled — nothing meaningful to chart.
+    // Leave the canvas empty rather than rendering a misleading empty chart.
+    return;
+  }
+
+  new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Students",
+          data: counts,
+          backgroundColor: colors,
+          borderRadius: 4,
+          borderSkipped: false,
+        },
+      ],
+    },
+    options: {
+      indexAxis: "y", // horizontal bars — reads more naturally for 3 named categories
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: {
+        duration: 900,
+        easing: "easeOutQuart",
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#1c1e22",
+          borderColor: C.border,
+          borderWidth: 1,
+          padding: 10,
+          titleFont: { family: "'Space Mono', monospace", size: 11 },
+          bodyFont:  { family: "'Space Mono', monospace", size: 11 },
+          callbacks: {
+            label: (item) => `  ${item.raw} students`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: {
+            color: "rgba(40,42,48,0.8)",
+            drawBorder: false,
+          },
+          ticks: {
+            font: { family: "'Space Mono', monospace", size: 10 },
+            color: C.muted,
+            precision: 0,
+          },
+          border: { display: false },
+        },
+        y: {
+          grid: { display: false },
+          ticks: {
+            font: { family: "'Space Grotesk', sans-serif", size: 12 },
+            color: C.text,
+          },
+          border: { color: C.border },
+        },
+      },
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Public API — called from app.js after data loads
 // ---------------------------------------------------------------------------
 
 window.renderCharts = function renderCharts(data) {
   renderDistributionChart(data);
+  renderProfileChart(data);
 };

@@ -1,17 +1,17 @@
 {
   "recall": 1.0,
-  "precision": 1.0,
-  "f1": 1.0,
-  "roc_auc": 1.0,
+  "precision": 0.7647058823529411,
+  "f1": 0.8666666666666667,
+  "roc_auc": 0.9999999999999999,
   "feature_importances": {
-    "days_since_last_login": 0.22,
-    "assessment_participation_ratio": 0.17667725991564098,
-    "recency_penalty": 0.17666666666666667,
-    "video_watch_ratio": 0.1701304159415256,
-    "engagement_score": 0.14002185039841586,
-    "avg_completion_rate": 0.10996363545219964,
-    "streak_days": 0.0065401716255512705,
-    "forum_posts_last_30d": 0.0,
-    "participation_gap": 0.0
+    "recency_penalty": 0.27225618683176633,
+    "days_since_last_login": 0.26602139580528755,
+    "streak_days": 0.21374474197910695,
+    "engagement_score": 0.0849098224083246,
+    "assessment_participation_ratio": 0.08082048766288541,
+    "video_watch_ratio": 0.05762738826629623,
+    "avg_completion_rate": 0.01603602759579746,
+    "forum_posts_last_30d": 0.006453949037535544,
+    "participation_gap": 0.0021300004129999163
   }
 }

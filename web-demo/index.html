@@ -178,6 +178,58 @@
 
 
   <!-- ═══════════════════════════════════════════════════════════
+       SECTION 3.5: PROFILES — risk profile breakdown
+       Bridges "how many are at risk" to "who needs the table below"
+  ════════════════════════════════════════════════════════════ -->
+  <section class="section section--profiles" id="profiles">
+    <div class="section__inner section__inner--split">
+
+      <div class="section__chart-wrap section__chart-wrap--profiles">
+        <canvas id="chart-profiles" role="img"
+          aria-label="Bar chart showing breakdown of at-risk students by behavioral profile"></canvas>
+      </div>
+
+      <div class="section__copy">
+        <div class="section__label" aria-hidden="true">02.5 — Risk Profiles</div>
+        <h2 class="section__heading reveal-text">
+          Not every at-risk student needs the same email.
+        </h2>
+        <p class="section__body">
+          At-risk students are clustered by behavioral and demographic
+          similarity into three profiles. Each one tells a different story
+          about <em>why</em> a student is disengaging — and points to a
+          different retention strategy.
+        </p>
+        <div class="profile-legend">
+          <div class="profile-legend__item">
+            <span class="profile-legend__dot profile-legend__dot--time-constrained"></span>
+            <div>
+              <strong>Time-Constrained</strong>
+              <p>Availability-driven drop-off. Often full-time workers or parents.</p>
+            </div>
+          </div>
+          <div class="profile-legend__item">
+            <span class="profile-legend__dot profile-legend__dot--disengaged"></span>
+            <div>
+              <strong>Disengaged Learner</strong>
+              <p>Passive viewing without active participation. Often younger, mobile-primary.</p>
+            </div>
+          </div>
+          <div class="profile-legend__item">
+            <span class="profile-legend__dot profile-legend__dot--quiet-decliner"></span>
+            <div>
+              <strong>Quiet Decliner</strong>
+              <p>Was engaged, recently dropped off. High investment, highly recoverable.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
        SECTION 4: ROSTER — the at-risk students table
   ════════════════════════════════════════════════════════════ -->
   <section class="section section--roster" id="roster">
@@ -186,12 +238,24 @@
       <h2 class="section__heading reveal-text">
         The students who need intervention.
       </h2>
+      <p class="section__body" style="margin-bottom: 1.5rem;">
+        Every at-risk student is matched to one of three behavioral profiles —
+        each with a distinct, tailored retention strategy. Not every dropout
+        risk looks the same, and the right outreach depends on knowing which
+        kind of risk you're looking at.
+      </p>
 
       <div class="roster__controls">
         <div class="roster__filter-group" role="group" aria-label="Filter by risk level">
-          <button class="filter-btn filter-btn--active" data-filter="all">All</button>
+          <button class="filter-btn filter-btn--active" data-filter="all">All Risk</button>
           <button class="filter-btn filter-btn--high" data-filter="HIGH">High</button>
           <button class="filter-btn filter-btn--medium" data-filter="MEDIUM">Medium</button>
+        </div>
+        <div class="roster__filter-group" role="group" aria-label="Filter by risk profile">
+          <button class="filter-btn filter-btn--active" data-profile-filter="all">All Profiles</button>
+          <button class="filter-btn filter-btn--time-constrained" data-profile-filter="Time-Constrained">Time-Constrained</button>
+          <button class="filter-btn filter-btn--disengaged" data-profile-filter="Disengaged Learner">Disengaged</button>
+          <button class="filter-btn filter-btn--quiet-decliner" data-profile-filter="Quiet Decliner">Quiet Decliner</button>
         </div>
         <div class="roster__count" id="roster-count">
           Showing <span id="roster-visible-count">—</span> students
@@ -205,8 +269,8 @@
               <th scope="col">Student ID</th>
               <th scope="col">Risk Score</th>
               <th scope="col">Risk Level</th>
-              <th scope="col">Top Signal</th>
-              <th scope="col">Recommended Action</th>
+              <th scope="col">Risk Profile</th>
+              <th scope="col">Suggested Strategy</th>
             </tr>
           </thead>
           <tbody id="roster-tbody">
@@ -299,15 +363,19 @@
     <div class="tooltip__inner" id="tooltip-content"></div>
   </div>
 
-  <!-- Chart.js -->
-<script src="js/chart.umd.min.js"></script>
+  <!-- Chart.js + GSAP loaded synchronously (no defer) at the end of body.
+       app.js and charts.js depend on both being fully evaluated before
+       they run — loading them here, in this order, guarantees that
+       without needing window.onload gating. -->
+       
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js"></script> -->
+  <script src="js/chart.umd.min.js"></script>
 
-<!-- GSAP + ScrollTrigger -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <!-- GSAP + ScrollTrigger -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
-<script src="js/charts.js"></script>
-<script src="js/app.js"></script>
-
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
