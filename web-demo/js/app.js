@@ -101,19 +101,50 @@ function _riskScoreClass(label) {
   return map[label] || "risk-score--low";
 }
 
+/**
+ * Maps a risk profile label to a CSS modifier class for badge styling.
+ * Falls back to a neutral style for any unrecognized or null profile
+ * (e.g. the "Needs Review" fallback profiler.py emits for edge cases).
+ */
+function _profileBadgeClass(profileLabel) {
+  const map = {
+    "Time-Constrained":    "profile-badge--time-constrained",
+    "Disengaged Learner":  "profile-badge--disengaged",
+    "Quiet Decliner":      "profile-badge--quiet-decliner",
+  };
+  return map[profileLabel] || "profile-badge--default";
+}
+
 function _buildTooltipContent(student) {
   const f = student.features;
-  return [
+  const d = student.demographics;
+  const lines = [
     `Login gap:    ${f.days_since_last_login}d`,
     `Completion:   ${(f.avg_completion_rate * 100).toFixed(0)}%`,
     `Assessments:  ${(f.assessment_participation_ratio * 100).toFixed(0)}%`,
     `Engagement:   ${(f.engagement_score * 100).toFixed(0)}%`,
-  ].join("\n");
+  ];
+  if (d) {
+    lines.push("");
+    lines.push(`Age:          ${d.age_bracket}`);
+    lines.push(`Employment:   ${d.employment_status}`);
+    lines.push(`Dependents:   ${d.has_dependents ? "Yes" : "No"}`);
+  }
+  if (student.risk_profile) {
+    lines.push("");
+    lines.push(student.risk_profile.description);
+  }
+  return lines.join("\n");
 }
 
 /**
  * Builds the roster table from at-risk students only.
  * Safe students (LOW) are excluded — instructors don't need to see them.
+ *
+ * Each row shows the student's risk profile (from K-Means clustering in
+ * profiler.py) instead of a generic tier-based action. The profile's
+ * tailored strategy is more actionable than "schedule a check-in" applied
+ * uniformly to every at-risk student regardless of why they're at risk.
  *
  * @param {Array} students - Full student array from predictions.json
  */
@@ -128,8 +159,13 @@ function populateRoster(students) {
   atRisk.forEach((student) => {
     const tr = document.createElement("tr");
     tr.dataset.risk = student.risk_label;
+    tr.dataset.profile = student.risk_profile ? student.risk_profile.label : "none";
 
-    const topSignal = SIGNAL_LABEL_MAP[student.top_signals[0]] || student.top_signals[0];
+    const profile = student.risk_profile;
+    const profileBadge = profile
+      ? `<span class="profile-badge ${_profileBadgeClass(profile.label)}">${profile.label}</span>`
+      : `<span class="profile-badge profile-badge--default">—</span>`;
+    const actionText = profile ? profile.suggested_strategy : student.recommended_action;
 
     tr.innerHTML = `
       <td><span class="user-id">${student.user_id}</span></td>
@@ -139,11 +175,11 @@ function populateRoster(students) {
         </span>
       </td>
       <td><span class="risk-badge risk-badge--${student.risk_label}">${student.risk_label}</span></td>
-      <td><span class="signal-tag">${topSignal}</span></td>
-      <td><span class="action-text">${student.recommended_action}</span></td>
+      <td>${profileBadge}</td>
+      <td><span class="action-text">${actionText}</span></td>
     `;
 
-    // Tooltip — feature breakdown on hover
+    // Tooltip — feature + demographic breakdown on hover
     const tooltipContent = _buildTooltipContent(student);
     tr.addEventListener("mouseenter", (e) => showTooltip(e, tooltipContent));
     tr.addEventListener("mousemove",  (e) => moveTooltip(e));
@@ -156,28 +192,48 @@ function populateRoster(students) {
   _wireFilterButtons(atRisk);
 }
 
+/**
+ * Wires both filter groups: risk-level (existing) and risk-profile (new).
+ * Each group operates independently — they filter on different dataset
+ * attributes (data-risk vs data-profile) and combine with AND logic, so
+ * a user can narrow to e.g. "HIGH risk" + "Time-Constrained" simultaneously.
+ */
 function _wireFilterButtons(atRiskStudents) {
-  const buttons = document.querySelectorAll(".filter-btn");
+  const riskButtons = document.querySelectorAll(".filter-btn[data-filter]");
+  const profileButtons = document.querySelectorAll(".filter-btn[data-profile-filter]");
   const visibleCount = document.getElementById("roster-visible-count");
 
-  buttons.forEach((btn) => {
+  let activeRiskFilter = "all";
+  let activeProfileFilter = "all";
+
+  function applyFilters() {
+    const rows = document.querySelectorAll("#roster-tbody tr");
+    let visible = 0;
+    rows.forEach((row) => {
+      const riskMatch = activeRiskFilter === "all" || row.dataset.risk === activeRiskFilter;
+      const profileMatch = activeProfileFilter === "all" || row.dataset.profile === activeProfileFilter;
+      const match = riskMatch && profileMatch;
+      row.style.display = match ? "" : "none";
+      if (match) visible++;
+    });
+    visibleCount.textContent = visible;
+  }
+
+  riskButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
-      const filter = btn.dataset.filter;
-
-      // Update active state
-      buttons.forEach((b) => b.classList.remove("filter-btn--active"));
+      activeRiskFilter = btn.dataset.filter;
+      riskButtons.forEach((b) => b.classList.remove("filter-btn--active"));
       btn.classList.add("filter-btn--active");
+      applyFilters();
+    });
+  });
 
-      // Show/hide rows
-      const rows = document.querySelectorAll("#roster-tbody tr");
-      let visible = 0;
-      rows.forEach((row) => {
-        const match = filter === "all" || row.dataset.risk === filter;
-        row.style.display = match ? "" : "none";
-        if (match) visible++;
-      });
-
-      visibleCount.textContent = visible;
+  profileButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      activeProfileFilter = btn.dataset.profileFilter;
+      profileButtons.forEach((b) => b.classList.remove("filter-btn--active"));
+      btn.classList.add("filter-btn--active");
+      applyFilters();
     });
   });
 }

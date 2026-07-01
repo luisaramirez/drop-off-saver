@@ -25,6 +25,13 @@
   --c-yellow:       #f5c842;       /* MEDIUM risk label */
   --c-green:        #3ecf8e;       /* Safe / PASS */
 
+  /* Risk profile accents — deliberately distinct hues from the risk-tier
+     palette above (red/yellow/green) so profile and tier read as two
+     separate dimensions, not a duplicate color-coding of the same thing. */
+  --c-violet:       #9b8cf2;       /* Time-Constrained */
+  --c-cyan:         #5ec9e8;       /* Disengaged Learner */
+  --c-rose:         #f28cb8;       /* Quiet Decliner */
+
   --c-text-primary: #f0f1f3;
   --c-text-secondary: #8a8f9a;
   --c-text-muted:   #4a4f5a;
@@ -382,6 +389,55 @@ body {
 .legend__dot--safe   { background: var(--c-green); }
 
 
+/* Profile legend — used in the new Risk Profiles section. Unlike the
+   compact risk legend above, each item includes a short description,
+   so the layout needs more vertical room per row. */
+.profile-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.profile-legend__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+}
+
+.profile-legend__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 0.4rem;
+}
+
+.profile-legend__dot--time-constrained { background: var(--c-violet); }
+.profile-legend__dot--disengaged       { background: var(--c-cyan); }
+.profile-legend__dot--quiet-decliner   { background: var(--c-rose); }
+
+.profile-legend__item strong {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--c-text-primary);
+  margin-bottom: 0.2rem;
+}
+
+.profile-legend__item p {
+  font-size: var(--text-xs);
+  color: var(--c-text-secondary);
+  line-height: 1.5;
+  max-width: 42ch;
+}
+
+.section--profiles { background-color: var(--c-bg); }
+
+.section__chart-wrap--profiles {
+  height: 280px;
+}
+
+
 /* ═══════════════════════════════════════════════════════════
    ROSTER TABLE
 ════════════════════════════════════════════════════════════ */
@@ -389,16 +445,17 @@ body {
 
 .roster__controls {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 0.75rem 1.5rem;
 }
 
 .roster__filter-group {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .filter-btn {
@@ -419,6 +476,12 @@ body {
 .filter-btn--active          { background: var(--c-amber-glow); border-color: var(--c-amber-dim); color: var(--c-amber); }
 .filter-btn--high:hover      { border-color: var(--c-red); color: var(--c-red); }
 .filter-btn--medium:hover    { border-color: var(--c-yellow); color: var(--c-yellow); }
+
+/* Profile filter buttons get their own hover colors matching the badge
+   palette, so the filter group visually previews what it will show. */
+.filter-btn--time-constrained:hover { border-color: var(--c-violet); color: var(--c-violet); }
+.filter-btn--disengaged:hover       { border-color: var(--c-cyan); color: var(--c-cyan); }
+.filter-btn--quiet-decliner:hover   { border-color: var(--c-rose); color: var(--c-rose); }
 
 .roster__count {
   font-family: var(--font-mono);
@@ -507,17 +570,27 @@ body {
 .action-text {
   font-size: var(--text-xs);
   color: var(--c-text-muted);
-  max-width: 30ch;
+  max-width: 32ch;
 }
 
-.signal-tag {
+/* Risk profile badges — output of K-Means clustering in profiler.py.
+   Each profile gets a distinct hue (see --c-violet/cyan/rose tokens)
+   so instructors can visually scan for a profile type at a glance. */
+.profile-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 3px;
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  color: var(--c-amber);
-  background: var(--c-amber-glow);
-  padding: 0.15rem 0.5rem;
-  border-radius: 3px;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+  white-space: nowrap;
 }
+
+.profile-badge--time-constrained { background: rgba(155, 140, 242, 0.15); color: var(--c-violet); }
+.profile-badge--disengaged       { background: rgba(94, 201, 232, 0.15);  color: var(--c-cyan); }
+.profile-badge--quiet-decliner   { background: rgba(242, 140, 184, 0.15); color: var(--c-rose); }
+.profile-badge--default          { background: rgba(138, 143, 154, 0.15); color: var(--c-text-muted); }
 
 
 /* ═══════════════════════════════════════════════════════════
