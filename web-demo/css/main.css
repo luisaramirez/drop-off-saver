@@ -628,13 +628,24 @@ body {
   height: auto;
 }
 
-/* Phase 1: every dot is a flat neutral grey — matches the sketch's
-   Screen 1, where no risk information is shown yet. Phase 2 will replace
-   this single rule with risk-tier-conditional fills. */
+/* Phase 1 base state: neutral grey, used only as a fallback if a dot is
+   somehow missing its data-risk-label (should not happen in practice —
+   every student record always has a risk_label). Phase 2 overrides this
+   via the attribute selectors below, which win on specificity. */
 .risk-journey__dot {
   fill: var(--c-border);
   transition: fill 0.3s ease;
 }
+
+/* Phase 2: color-code every dot by the SAME risk tier used everywhere
+   else on the page (roster badges, distribution chart, legend). Reuses
+   the existing --c-red/--c-yellow/--c-green tokens rather than
+   introducing new colors, so this reads as one consistent risk language
+   across the whole site, not a separate palette invented for this one
+   visualization. */
+.risk-journey__dot[data-risk-label="HIGH"]   { fill: var(--c-red); }
+.risk-journey__dot[data-risk-label="MEDIUM"] { fill: var(--c-yellow); }
+.risk-journey__dot[data-risk-label="LOW"]    { fill: var(--c-green); }
 
 @media (max-width: 900px) {
   .risk-journey__layout {

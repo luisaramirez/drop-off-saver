@@ -69,15 +69,29 @@
       <div class="risk-journey__layout">
 
         <div class="risk-journey__copy">
-          <div class="section__label" aria-hidden="true">Risk Journey — Step 1</div>
+          <div class="section__label" aria-hidden="true">Risk Journey — Step 2</div>
           <h2 class="section__heading reveal-text">
-            Every student, one dot.
+            Color reveals the risk.
           </h2>
           <p class="section__body">
-            <span id="risk-journey-student-count">500</span> students tracked this term. No risk information yet —
-            just the raw population, one dot per student, exactly as
-            they appear in the dataset.
+            <span id="risk-journey-student-count">500</span> students tracked
+            this term. Each dot is colored by the model's own risk score —
+            the same score used everywhere else on this page.
           </p>
+          <div class="legend">
+            <div class="legend__item">
+              <span class="legend__dot legend__dot--high"></span>
+              <span>High risk  ≥ <span class="value-high-cutoff">0.75</span></span>
+            </div>
+            <div class="legend__item">
+              <span class="legend__dot legend__dot--medium"></span>
+              <span>Medium risk  ≥ <span class="value-risk-threshold">0.60</span></span>
+            </div>
+            <div class="legend__item">
+              <span class="legend__dot legend__dot--safe"></span>
+              <span>Safe  &lt; <span class="value-risk-threshold">0.60</span></span>
+            </div>
+          </div>
         </div>
 
         <div class="risk-journey__canvas" id="risk-journey-canvas">
@@ -126,21 +140,21 @@
         </h2>
         <p class="section__body">
           The model assigns each student a probability score from 0 to 1.
-          Students above the <strong><span id="distribution-threshold-value">0.60</span> threshold</strong> are flagged for
+          Students above the <strong><span class="value-risk-threshold">0.60</span> threshold</strong> are flagged for
           intervention — prioritized by severity.
         </p>
         <div class="legend">
           <div class="legend__item">
             <span class="legend__dot legend__dot--high"></span>
-            <span>High risk  ≥ <span id="legend-high-value">0.75</span></span>
+            <span>High risk  ≥ <span class="value-high-cutoff">0.75</span></span>
           </div>
           <div class="legend__item">
             <span class="legend__dot legend__dot--medium"></span>
-            <span>Medium risk  ≥ <span id="legend-medium-value">0.60</span></span>
+            <span>Medium risk  ≥ <span class="value-risk-threshold">0.60</span></span>
           </div>
           <div class="legend__item">
             <span class="legend__dot legend__dot--safe"></span>
-            <span>Safe  &lt; <span id="legend-safe-value">0.60</span></span>
+            <span>Safe  &lt; <span class="value-risk-threshold">0.60</span></span>
           </div>
         </div>
       </div>

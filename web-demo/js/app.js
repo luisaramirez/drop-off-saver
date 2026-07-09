@@ -492,10 +492,13 @@ function animateStatCards() {
  * "500 students tracked", feature-importance percentages, and risk
  * threshold values would all describe a dataset that no longer exists.
  *
- * Each target element is found by ID (set in index.html) and updated only
- * if present — this function is safe to call even if a given span hasn't
- * been added to the page yet, so it can be extended incrementally as more
- * of the page adopts dynamic placeholders.
+ * Threshold values use a BROADCAST pattern: rather than one `id` per
+ * element (which needs new JS wiring every time the same number appears
+ * in a new place — e.g. once in the Distribution legend, then again in
+ * the Risk Journey legend), elements share a class (.value-risk-threshold,
+ * .value-high-cutoff) and every matching element on the page gets updated
+ * in one querySelectorAll pass. Adding a third or fourth legend elsewhere
+ * later requires zero changes here — just reuse the same class in HTML.
  *
  * @param {object} data - Full predictions.json payload
  */
@@ -506,7 +509,7 @@ function populateNarrativeCopy(data) {
     journeyCount.textContent = data.summary.total_students.toLocaleString();
   }
 
-  // --- Distribution section: threshold value + legend cutoffs ---
+  // --- Risk threshold values: broadcast to every instance on the page ---
   // data.threshold is the configurable RISK_THRESHOLD (env var in notifier.py).
   // data.high_risk_cutoff is HIGH_RISK_CUTOFF — technically a fixed constant
   // today, but exported rather than hardcoded so the HTML never silently
@@ -514,17 +517,13 @@ function populateNarrativeCopy(data) {
   const thresholdFormatted = data.threshold.toFixed(2);
   const highCutoffFormatted = data.high_risk_cutoff.toFixed(2);
 
-  const distributionThreshold = document.getElementById("distribution-threshold-value");
-  if (distributionThreshold) distributionThreshold.textContent = thresholdFormatted;
+  document.querySelectorAll(".value-risk-threshold").forEach((el) => {
+    el.textContent = thresholdFormatted;
+  });
 
-  const legendHigh = document.getElementById("legend-high-value");
-  if (legendHigh) legendHigh.textContent = highCutoffFormatted;
-
-  const legendMedium = document.getElementById("legend-medium-value");
-  if (legendMedium) legendMedium.textContent = thresholdFormatted;
-
-  const legendSafe = document.getElementById("legend-safe-value");
-  if (legendSafe) legendSafe.textContent = thresholdFormatted;
+  document.querySelectorAll(".value-high-cutoff").forEach((el) => {
+    el.textContent = highCutoffFormatted;
+  });
 
   // Note: signal-card weight bars are NOT patched here. populateSignalCards()
   // builds those cards from scratch with the correct data-weight value
