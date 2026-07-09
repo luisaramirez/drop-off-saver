@@ -594,6 +594,57 @@ body {
 
 
 /* ═══════════════════════════════════════════════════════════
+   RISK JOURNEY — scroll-driven dot narrative
+   ═══════════════════════════════════════════════════════════
+   PHASE 1 SCOPE: static grid layout only. Color-coding (Phase 2),
+   the metaball merge (Phase 3+), and click interactions (Phase 7+)
+   are NOT yet styled here — added incrementally as those phases land.
+════════════════════════════════════════════════════════════ */
+.section--risk-journey {
+  background-color: var(--c-bg);
+}
+
+.risk-journey__layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: center;
+  min-height: 70vh;
+}
+
+.risk-journey__copy {
+  max-width: 44ch;
+}
+
+.risk-journey__canvas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.risk-journey__svg {
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+}
+
+/* Phase 1: every dot is a flat neutral grey — matches the sketch's
+   Screen 1, where no risk information is shown yet. Phase 2 will replace
+   this single rule with risk-tier-conditional fills. */
+.risk-journey__dot {
+  fill: var(--c-border);
+  transition: fill 0.3s ease;
+}
+
+@media (max-width: 900px) {
+  .risk-journey__layout {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
    SYSTEM FLOW
 ════════════════════════════════════════════════════════════ */
 .section--system { background-color: var(--c-bg-surface); }

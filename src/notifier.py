@@ -45,6 +45,7 @@ DATA_PATH = Path(os.getenv("DATA_RAW_PATH", "data/raw/students.csv"))
 MODEL_PATH = Path(os.getenv("MODEL_DIR", "data/processed")) / "model.joblib"
 OUTPUT_PATH = Path(os.getenv("JSON_OUTPUT_PATH", "web-demo/assets/predictions.json"))
 RISK_THRESHOLD = float(os.getenv("RISK_THRESHOLD", 0.60))
+HIGH_RISK_CUTOFF = float(os.getenv("HIGH_RISK_CUTOFF", 0.75))
 MODEL_VERSION = os.getenv("MODEL_VERSION", "1.0.0")
 
 # Top N feature signals to surface per student in the JSON
@@ -57,7 +58,7 @@ TOP_N_SIGNALS = 2
 
 def _assign_tier(score: float, threshold: float) -> str:
     """Maps a probability score to a human-readable risk tier."""
-    if score >= 0.75:
+    if score >= HIGH_RISK_CUTOFF:
         return "HIGH"
     elif score >= threshold:
         return "MEDIUM"
@@ -214,6 +215,12 @@ def export_predictions() -> dict:
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "model_version": MODEL_VERSION,
         "threshold": RISK_THRESHOLD,
+        "high_risk_cutoff": HIGH_RISK_CUTOFF,
+        # Exported so the frontend never has to hardcode a feature's
+        # importance percentage in HTML — app.js reads this to set the
+        # signal-card weight bars, so they stay correct after any retrain
+        # (different dataset size, different seed, different n_estimators).
+        "feature_importances": feature_importances,
         "summary": {
             "total_students": len(students_output),
             "at_risk_count": len(at_risk),

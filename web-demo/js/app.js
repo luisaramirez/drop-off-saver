@@ -32,6 +32,92 @@ const SIGNAL_LABEL_MAP = {
   participation_gap:              "Participation gap",
 };
 
+/**
+ * Content for every possible feature the model can rank as top-3.
+ * populateSignalCards() sorts feature_importances descending and builds
+ * cards ONLY for whichever 3 keys come out on top for the current trained
+ * model — this map has to cover all 9 possible features (not just 3)
+ * since a retrain on a different dataset can shift which ones matter most.
+ *
+ * Each icon is a hand-drawn SVG string in the same visual language as the
+ * rest of the page: 48x48 viewBox, currentColor stroke, stroke-width 2,
+ * rounded caps/joins — kept minimal and geometric rather than a symbol
+ * library, matching the existing hero/system-node icon style.
+ */
+const SIGNAL_CONTENT_MAP = {
+  days_since_last_login: {
+    title: "Recency drift",
+    body: "Login gaps compound. A student missing one week is recoverable. Missing three weeks is almost always a permanent exit.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="2"/>
+      <path d="M24 12v12l8 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>`,
+  },
+  avg_completion_rate: {
+    title: "Completion stall",
+    body: "Progress doesn't stop suddenly. It slows — then freezes. A stalled completion rate is a critical early warning.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="8" y="8" width="32" height="32" rx="4" stroke="currentColor" stroke-width="2"/>
+      <path d="M16 24l6 6 10-12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`,
+  },
+  assessment_participation_ratio: {
+    title: "Assessment silence",
+    body: "Skipping quizzes is a leading indicator, not a lagging one. Students who disengage from assessments first, drop out second.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M12 36L24 12l12 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M17 28h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>`,
+  },
+  forum_posts_last_30d: {
+    title: "Community silence",
+    body: "Forum activity is a low-effort signal of belonging. When it disappears entirely, the course has often stopped feeling like a place to show up for.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M10 12h28a2 2 0 012 2v16a2 2 0 01-2 2H24l-8 8v-8h-6a2 2 0 01-2-2V14a2 2 0 012-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`,
+  },
+  video_watch_ratio: {
+    title: "Passive viewing",
+    body: "Watching drops off more slowly than testing does. By the time video consumption falls too, disengagement is usually already advanced.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="2"/>
+      <path d="M20 16l12 8-12 8z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+    </svg>`,
+  },
+  streak_days: {
+    title: "Broken streak",
+    body: "A long streak is momentum — students protect it. Once broken, there's no habit left pulling them back to the course tomorrow.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M24 8c-1 6-9 10-9 19a9 9 0 0018 0c0-3-1-5-3-7-1 3-3 4-4 4 1-6-1-11-2-16z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`,
+  },
+  engagement_score: {
+    title: "Composite engagement",
+    body: "No single signal tells the whole story. This blended score weighs completion, assessments, video, and community activity into one number.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M8 32a16 16 0 0132 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M24 32l7-9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="24" cy="32" r="2.5" stroke="currentColor" stroke-width="2"/>
+    </svg>`,
+  },
+  recency_penalty: {
+    title: "Accelerating absence",
+    body: "The cost of being away isn't linear. Each additional day gone matters more than the last — risk compounds, it doesn't just add up.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M8 14c8 1 13 6 15 12s6 10 12 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M29 30l6 6m0 0v-6m0 6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`,
+  },
+  participation_gap: {
+    title: "Watching without testing",
+    body: "Some students keep consuming content while quietly opting out of being evaluated. That gap between watching and testing is often the earliest tell.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M16 32V16m0 0l-5 5m5-5l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M32 16v16m0 0l-5-5m5 5l5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`,
+  },
+};
+
 // ---------------------------------------------------------------------------
 // Data ingestion
 // ---------------------------------------------------------------------------
@@ -295,20 +381,11 @@ function initScrollAnimations() {
     });
   });
 
-  // --- Signal cards stagger ---
-  gsap.to(".signal-card", {
-    scrollTrigger: {
-      trigger: ".signal-grid",
-      start: "top 75%",
-      once: true,
-    },
-    opacity: 1,
-    y: 0,
-    stagger: 0.12,
-    duration: 0.7,
-    ease: "power3.out",
-    onComplete: animateWeightBars,
-  });
+  // NOTE: Signal card stagger + weight bars are NOT set up here. Those
+  // cards don't exist in the DOM yet at this point in the boot sequence —
+  // #signal-grid is an empty container until populateSignalCards() builds
+  // it from live feature_importances data. See initSignalCardReveal(),
+  // called separately from boot() right after the cards are constructed.
 
   // --- System nodes stagger ---
   gsap.to(".system-node", {
@@ -322,6 +399,35 @@ function initScrollAnimations() {
     stagger: 0.15,
     duration: 0.7,
     ease: "power3.out",
+  });
+}
+
+/**
+ * Sets up the scroll-triggered stagger reveal for the Signal section's
+ * cards, plus the weight-bar fill animation that follows it.
+ *
+ * Split out from initScrollAnimations() because — unlike every other
+ * scroll-triggered element on the page, which exists in static HTML from
+ * first paint — the .signal-card elements are constructed at runtime by
+ * populateSignalCards() once feature_importances has been fetched. A
+ * ScrollTrigger registered against ".signal-card" before those elements
+ * exist would match an empty NodeList and silently do nothing. Calling
+ * this function AFTER populateSignalCards() guarantees the elements are
+ * already in the DOM when GSAP looks for them.
+ */
+function initSignalCardReveal() {
+  gsap.to(".signal-card", {
+    scrollTrigger: {
+      trigger: ".signal-grid",
+      start: "top 75%",
+      once: true,
+    },
+    opacity: 1,
+    y: 0,
+    stagger: 0.12,
+    duration: 0.7,
+    ease: "power3.out",
+    onComplete: animateWeightBars,
   });
 }
 
@@ -375,6 +481,112 @@ function animateStatCards() {
 }
 
 // ---------------------------------------------------------------------------
+// Narrative copy — dynamic placeholders
+// ---------------------------------------------------------------------------
+
+/**
+ * Replaces every hardcoded numeric claim in the page's static copy with
+ * the live value from predictions.json. Without this, retraining on a
+ * differently-sized dataset (e.g. regenerating students.csv with 700 rows
+ * instead of 500) silently leaves stale numbers sitting in the HTML —
+ * "500 students tracked", feature-importance percentages, and risk
+ * threshold values would all describe a dataset that no longer exists.
+ *
+ * Each target element is found by ID (set in index.html) and updated only
+ * if present — this function is safe to call even if a given span hasn't
+ * been added to the page yet, so it can be extended incrementally as more
+ * of the page adopts dynamic placeholders.
+ *
+ * @param {object} data - Full predictions.json payload
+ */
+function populateNarrativeCopy(data) {
+  // --- Risk Journey section: total student count ---
+  const journeyCount = document.getElementById("risk-journey-student-count");
+  if (journeyCount) {
+    journeyCount.textContent = data.summary.total_students.toLocaleString();
+  }
+
+  // --- Distribution section: threshold value + legend cutoffs ---
+  // data.threshold is the configurable RISK_THRESHOLD (env var in notifier.py).
+  // data.high_risk_cutoff is HIGH_RISK_CUTOFF — technically a fixed constant
+  // today, but exported rather than hardcoded so the HTML never silently
+  // drifts from the Python source of truth if that constant ever changes.
+  const thresholdFormatted = data.threshold.toFixed(2);
+  const highCutoffFormatted = data.high_risk_cutoff.toFixed(2);
+
+  const distributionThreshold = document.getElementById("distribution-threshold-value");
+  if (distributionThreshold) distributionThreshold.textContent = thresholdFormatted;
+
+  const legendHigh = document.getElementById("legend-high-value");
+  if (legendHigh) legendHigh.textContent = highCutoffFormatted;
+
+  const legendMedium = document.getElementById("legend-medium-value");
+  if (legendMedium) legendMedium.textContent = thresholdFormatted;
+
+  const legendSafe = document.getElementById("legend-safe-value");
+  if (legendSafe) legendSafe.textContent = thresholdFormatted;
+
+  // Note: signal-card weight bars are NOT patched here. populateSignalCards()
+  // builds those cards from scratch with the correct data-weight value
+  // already baked in at creation time — see below.
+}
+
+/**
+ * Builds the Signal section's 3 cards entirely from feature_importances,
+ * rather than relying on hardcoded HTML. This exists because a retrain
+ * on a different-sized dataset can change not just the WEIGHT PERCENTAGES
+ * shown, but which 3 features are actually most predictive — a card
+ * hardcoded as "Completion stall" is misleading if avg_completion_rate
+ * has dropped out of the true top 3 for the current model. Rebuilding
+ * the cards from a full content map (SIGNAL_CONTENT_MAP, covering all 9
+ * possible features) keeps the claim "these are the three most influential
+ * variables" honest regardless of dataset size or retrain.
+ *
+ * @param {object} data - Full predictions.json payload
+ */
+function populateSignalCards(data) {
+  const container = document.getElementById("signal-grid");
+  if (!container || !data.feature_importances) return;
+
+  // Rank all features by importance, descending, and take the top 3.
+  const ranked = Object.entries(data.feature_importances).sort(
+    (a, b) => b[1] - a[1]
+  );
+  const top3 = ranked.slice(0, 3);
+
+  container.innerHTML = "";
+
+  top3.forEach(([featureKey, importance]) => {
+    const content = SIGNAL_CONTENT_MAP[featureKey];
+    if (!content) {
+      // Defensive fallback: a feature the model ranked highly but that
+      // isn't in the content map yet (e.g. a brand-new engineered feature
+      // added to features.py without a matching card written here).
+      console.warn(
+        `[Drop-off Saver] No SIGNAL_CONTENT_MAP entry for "${featureKey}" — skipping card.`
+      );
+      return;
+    }
+
+    const card = document.createElement("div");
+    card.className = "signal-card";
+    card.dataset.signal = featureKey;
+    card.innerHTML = `
+      <div class="signal-card__icon">${content.icon}</div>
+      <h3 class="signal-card__title">${content.title}</h3>
+      <p class="signal-card__body">${content.body}</p>
+      <div class="signal-card__weight">
+        <span class="signal-card__weight-label">Model weight</span>
+        <div class="signal-card__weight-bar">
+          <div class="signal-card__weight-fill" data-feature-key="${featureKey}" data-weight="${importance.toFixed(2)}" style="width: 0%"></div>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Footer metadata
 // ---------------------------------------------------------------------------
 
@@ -404,6 +616,11 @@ async function boot() {
     // Populate UI
     populateHeroStats(data.summary);
     animateStatCards();
+
+    populateNarrativeCopy(data);
+
+    populateSignalCards(data);
+    initSignalCardReveal();
 
     populateRoster(data.students);
     animateRosterRows();

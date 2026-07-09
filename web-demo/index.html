@@ -58,6 +58,38 @@
 
 
   <!-- ═══════════════════════════════════════════════════════════
+       SECTION 1.5: RISK JOURNEY — scroll-driven dot narrative
+       PHASE 1 SCOPE: static dot grid only. This section will grow
+       across Phases 2-9 into the full merge/split/drill-down sequence.
+       Placement (before vs. replacing hero's stat cluster) is not yet
+       finalized — revisit once the full sequence is built.
+  ════════════════════════════════════════════════════════════ -->
+  <section class="section section--risk-journey" id="risk-journey">
+    <div class="section__inner">
+      <div class="risk-journey__layout">
+
+        <div class="risk-journey__copy">
+          <div class="section__label" aria-hidden="true">Risk Journey — Step 1</div>
+          <h2 class="section__heading reveal-text">
+            Every student, one dot.
+          </h2>
+          <p class="section__body">
+            <span id="risk-journey-student-count">500</span> students tracked this term. No risk information yet —
+            just the raw population, one dot per student, exactly as
+            they appear in the dataset.
+          </p>
+        </div>
+
+        <div class="risk-journey__canvas" id="risk-journey-canvas">
+          <!-- SVG dot grid rendered here by riskJourney.js -->
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
        SECTION 2: SIGNAL — how the model reads disengagement
   ════════════════════════════════════════════════════════════ -->
   <section class="section section--signal" id="signal">
@@ -68,69 +100,14 @@
         Three patterns predict every dropout.
       </h2>
 
-      <div class="signal-grid">
+      <!-- Populated entirely by app.js:populateSignalCards(), which reads
+           feature_importances from predictions.json, ranks all 9 model
+           features, and builds exactly the top 3 as cards — whichever
+           those turn out to be for the current trained model. No feature
+           is hardcoded here; the content map living in app.js covers all
+           9 possible features so any combination can appear correctly. -->
+      <div class="signal-grid" id="signal-grid"></div>
 
-        <div class="signal-card" data-signal="recency">
-          <div class="signal-card__icon">
-            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="2"/>
-              <path d="M24 12v12l8 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <h3 class="signal-card__title">Recency drift</h3>
-          <p class="signal-card__body">
-            Login gaps compound. A student missing one week is recoverable.
-            Missing three weeks is almost always a permanent exit.
-          </p>
-          <div class="signal-card__weight">
-            <span class="signal-card__weight-label">Model weight</span>
-            <div class="signal-card__weight-bar">
-              <div class="signal-card__weight-fill" data-weight="0.38" style="width: 0%"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="signal-card" data-signal="completion">
-          <div class="signal-card__icon">
-            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <rect x="8" y="8" width="32" height="32" rx="4" stroke="currentColor" stroke-width="2"/>
-              <path d="M16 24l6 6 10-12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <h3 class="signal-card__title">Completion stall</h3>
-          <p class="signal-card__body">
-            Progress doesn't stop suddenly. It slows — then freezes.
-            Average completion below 40% is the critical threshold.
-          </p>
-          <div class="signal-card__weight">
-            <span class="signal-card__weight-label">Model weight</span>
-            <div class="signal-card__weight-bar">
-              <div class="signal-card__weight-fill" data-weight="0.31" style="width: 0%"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="signal-card" data-signal="assessment">
-          <div class="signal-card__icon">
-            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path d="M12 36L24 12l12 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M17 28h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <h3 class="signal-card__title">Assessment silence</h3>
-          <p class="signal-card__body">
-            Skipping quizzes is a leading indicator, not a lagging one.
-            Students who disengage from assessments first, drop out second.
-          </p>
-          <div class="signal-card__weight">
-            <span class="signal-card__weight-label">Model weight</span>
-            <div class="signal-card__weight-bar">
-              <div class="signal-card__weight-fill" data-weight="0.22" style="width: 0%"></div>
-            </div>
-          </div>
-        </div>
-
-      </div>
     </div>
   </section>
 
@@ -149,21 +126,21 @@
         </h2>
         <p class="section__body">
           The model assigns each student a probability score from 0 to 1.
-          Students above the <strong>0.60 threshold</strong> are flagged for
+          Students above the <strong><span id="distribution-threshold-value">0.60</span> threshold</strong> are flagged for
           intervention — prioritized by severity.
         </p>
         <div class="legend">
           <div class="legend__item">
             <span class="legend__dot legend__dot--high"></span>
-            <span>High risk  ≥ 0.75</span>
+            <span>High risk  ≥ <span id="legend-high-value">0.75</span></span>
           </div>
           <div class="legend__item">
             <span class="legend__dot legend__dot--medium"></span>
-            <span>Medium risk  ≥ 0.60</span>
+            <span>Medium risk  ≥ <span id="legend-medium-value">0.60</span></span>
           </div>
           <div class="legend__item">
             <span class="legend__dot legend__dot--safe"></span>
-            <span>Safe  &lt; 0.60</span>
+            <span>Safe  &lt; <span id="legend-safe-value">0.60</span></span>
           </div>
         </div>
       </div>
@@ -367,15 +344,12 @@
        app.js and charts.js depend on both being fully evaluated before
        they run — loading them here, in this order, guarantees that
        without needing window.onload gating. -->
-       
-  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js"></script> -->
-  <script src="js/chart.umd.min.js"></script>
-
-  <!-- GSAP + ScrollTrigger -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
   <script src="js/charts.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/riskJourney.js"></script>
 </body>
 </html>
