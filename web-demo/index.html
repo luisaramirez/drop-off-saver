@@ -59,39 +59,60 @@
 
   <!-- ═══════════════════════════════════════════════════════════
        SECTION 1.5: RISK JOURNEY — scroll-driven dot narrative
-       PHASE 1 SCOPE: static dot grid only. This section will grow
-       across Phases 2-9 into the full merge/split/drill-down sequence.
-       Placement (before vs. replacing hero's stat cluster) is not yet
-       finalized — revisit once the full sequence is built.
+       This section will grow across further phases into the full
+       merge/split/drill-down sequence. Placement (before vs. replacing
+       hero's stat cluster) is not yet finalized — revisit once the full
+       sequence is built.
+
+       Copy has TWO stacked panels sharing one grid cell (see CSS), not
+       one static block. #risk-journey-intro is the resting state (visible
+       while dots are grey/appearing). #risk-journey-thresholds crossfades
+       in — synchronized with the dot color wash via one shared GSAP
+       timeline in riskJourney.js — as the user continues scrolling.
   ════════════════════════════════════════════════════════════ -->
   <section class="section section--risk-journey" id="risk-journey">
     <div class="section__inner">
       <div class="risk-journey__layout">
 
-        <div class="risk-journey__copy">
-          <div class="section__label" aria-hidden="true">Risk Journey — Step 2</div>
-          <h2 class="section__heading reveal-text">
-            Color reveals the risk.
-          </h2>
-          <p class="section__body">
-            <span id="risk-journey-student-count">500</span> students tracked
-            this term. Each dot is colored by the model's own risk score —
-            the same score used everywhere else on this page.
-          </p>
-          <div class="legend">
-            <div class="legend__item">
-              <span class="legend__dot legend__dot--high"></span>
-              <span>High risk  ≥ <span class="value-high-cutoff">0.75</span></span>
-            </div>
-            <div class="legend__item">
-              <span class="legend__dot legend__dot--medium"></span>
-              <span>Medium risk  ≥ <span class="value-risk-threshold">0.60</span></span>
-            </div>
-            <div class="legend__item">
-              <span class="legend__dot legend__dot--safe"></span>
-              <span>Safe  &lt; <span class="value-risk-threshold">0.60</span></span>
+        <div class="risk-journey__copy-stack">
+
+          <div class="risk-journey__copy-panel" id="risk-journey-intro">
+            <div class="section__label" aria-hidden="true">Risk Journey — Step 1</div>
+            <h2 class="section__heading reveal-text">
+              Every student, one dot.
+            </h2>
+            <p class="section__body">
+              <span id="risk-journey-student-count">500</span> students
+              tracked this term. This is the whole population — one dot
+              per student, exactly as they appear in the dataset.
+            </p>
+          </div>
+
+          <div class="risk-journey__copy-panel" id="risk-journey-thresholds">
+            <div class="section__label" aria-hidden="true">Risk Journey — Step 2</div>
+            <h2 class="section__heading">
+              Color reveals the risk.
+            </h2>
+            <p class="section__body">
+              Each dot is colored by the model's own risk score — the
+              same score used everywhere else on this page.
+            </p>
+            <div class="legend">
+              <div class="legend__item">
+                <span class="legend__dot legend__dot--high"></span>
+                <span>High risk  ≥ <span class="value-high-cutoff">0.75</span></span>
+              </div>
+              <div class="legend__item">
+                <span class="legend__dot legend__dot--medium"></span>
+                <span>Medium risk  ≥ <span class="value-risk-threshold">0.60</span></span>
+              </div>
+              <div class="legend__item">
+                <span class="legend__dot legend__dot--safe"></span>
+                <span>Safe  &lt; <span class="value-risk-threshold">0.60</span></span>
+              </div>
             </div>
           </div>
+
         </div>
 
         <div class="risk-journey__canvas" id="risk-journey-canvas">

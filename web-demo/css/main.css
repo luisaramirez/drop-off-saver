@@ -612,9 +612,27 @@ body {
   min-height: 70vh;
 }
 
-.risk-journey__copy {
+.risk-journey__copy-stack {
+  /* CSS grid stacking: both panels are placed in the SAME grid cell
+     (grid-area: 1 / 1 on each, below), so they overlap exactly without
+     manual position:absolute/top/left math, and the container sizes
+     itself to whichever panel is currently tallest. GSAP crossfades
+     opacity between them — see riskJourney.js. */
+  display: grid;
   max-width: 44ch;
 }
+
+.risk-journey__copy-panel {
+  grid-area: 1 / 1;
+  align-self: start;
+}
+
+/* Resting state if GSAP never runs (load failure, JS disabled): show the
+   intro panel only, keep thresholds hidden. A single non-animated intro
+   panel is a sensible degraded state; two overlapping panels both fully
+   visible would read as broken, garbled text. */
+#risk-journey-intro { opacity: 1; }
+#risk-journey-thresholds { opacity: 0; }
 
 .risk-journey__canvas {
   display: flex;
@@ -631,10 +649,15 @@ body {
 /* Phase 1 base state: neutral grey, used only as a fallback if a dot is
    somehow missing its data-risk-label (should not happen in practice —
    every student record always has a risk_label). Phase 2 overrides this
-   via the attribute selectors below, which win on specificity. */
+   via the attribute selectors below, which win on specificity.
+
+   No CSS transition on fill here — GSAP now owns fill animation directly
+   via inline styles during the scroll-scrubbed color wash (riskJourney.js).
+   A CSS transition running alongside GSAP's per-frame scrub updates would
+   double-smooth and lag behind the scrub, since scrub already IS the
+   interpolation; the two would fight rather than compose. */
 .risk-journey__dot {
   fill: var(--c-border);
-  transition: fill 0.3s ease;
 }
 
 /* Phase 2: color-code every dot by the SAME risk tier used everywhere
