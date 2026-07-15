@@ -45,6 +45,7 @@ Now that we have everything in terms of data, we can work on enhancing the visua
 The goal is to use visual elements/shapes to represent students and the data we know about them (Risk level and profile) in a cohesive interactive story.
 
 **Work done:**
-  - Adding riskJourney.js to fetch data from predisctions.json and begin creating UI elements to represent it.
+  - Adding riskJourney.js to fetch data from predictions.json and begin creating UI elements to represent it.
   - Modifying notifier.py in the intelligence layer with dynamic values for high_risk_cutoff.
   - Updating the front-end (index.html, main.css and app.js) to display the proposed interactive visual narrative, as well as replacing all hardcoded values with dynamic placeholders that represent real data from our CSV source of truth.
+  - Defining scroll zones for the dots grid entrance and coloring animations
