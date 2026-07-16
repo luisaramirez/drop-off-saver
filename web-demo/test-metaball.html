@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Metaball Merge — Isolated Test</title>
+
+  <link rel="stylesheet" href="css/main.css" />
+  <style>
+    /* Test-page-only layout. Not part of the shipped site — reuses
+       main.css tokens/fonts for visual consistency, but the page
+       structure here is throwaway scaffolding for iterating on the
+       goo filter and merge animation before wiring it into
+       riskJourney.js. */
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1.5rem;
+      gap: 2rem;
+    }
+
+    .test-header {
+      text-align: center;
+      max-width: 60ch;
+    }
+
+    .test-header h1 {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      margin-bottom: 0.5rem;
+    }
+
+    .test-header p {
+      color: var(--c-text-secondary);
+      font-size: var(--text-sm);
+    }
+
+    .test-controls {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      background: var(--c-bg-surface);
+      border: 1px solid var(--c-border);
+      border-radius: 10px;
+      padding: 1rem 1.5rem;
+    }
+
+    .test-btn {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.6rem 1.1rem;
+      border-radius: 4px;
+      border: 1px solid var(--c-border);
+      background: transparent;
+      color: var(--c-text-secondary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .test-btn:hover { border-color: var(--c-amber-dim); color: var(--c-amber); }
+    .test-btn--active { background: var(--c-amber-glow); border-color: var(--c-amber-dim); color: var(--c-amber); }
+
+    .test-slider-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--c-text-secondary);
+    }
+
+    .test-slider-group input[type="range"] {
+      accent-color: var(--c-amber);
+    }
+
+    .test-slider-value {
+      color: var(--c-amber);
+      min-width: 2.5ch;
+    }
+
+    .test-canvas-wrap {
+      width: 100%;
+      max-width: 900px;
+      background: var(--c-bg-surface);
+      border: 1px solid var(--c-border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    #metaball-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .cluster-label {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      fill: var(--c-text-primary);
+      text-anchor: middle;
+      opacity: 0;
+    }
+
+    .test-note {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--c-text-muted);
+      max-width: 60ch;
+      text-align: center;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="test-header">
+    <h1>Metaball Merge — Isolated Proof-of-Concept</h1>
+    <p>
+      Standalone test page. Not linked from index.html, not wired into
+      riskJourney.js yet. Purpose: prove the goo-filter + centroid-merge
+      technique looks right and performs well on the real dataset size
+      before integrating it into the production scroll sequence.
+    </p>
+  </div>
+
+  <div class="test-controls">
+    <button class="test-btn test-btn--active" id="btn-grid">Show Grid</button>
+    <button class="test-btn" id="btn-merge">Merge into Clusters</button>
+
+    <div class="test-slider-group">
+      <label for="blur-slider">Blur (stdDeviation)</label>
+      <input type="range" id="blur-slider" min="0" max="16" step="0.5" value="7" />
+      <span class="test-slider-value" id="blur-value">7</span>
+    </div>
+
+    <div class="test-slider-group">
+      <label for="jitter-slider">Cluster tightness (k)</label>
+      <input type="range" id="jitter-slider" min="2" max="12" step="0.5" value="6" />
+      <span class="test-slider-value" id="jitter-value">6</span>
+    </div>
+  </div>
+
+  <div class="test-canvas-wrap">
+    <svg id="metaball-svg" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="goo">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
+          <feColorMatrix
+            in="blur"
+            mode="matrix"
+            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"
+            result="goo"
+          />
+          <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+        </filter>
+      </defs>
+
+      <g id="dots-group" filter="url(#goo)"></g>
+
+      <text class="cluster-label" id="label-healthy" x="220" y="250"></text>
+      <text class="cluster-label" id="label-at-risk" x="580" y="250"></text>
+    </svg>
+  </div>
+
+  <p class="test-note">
+    Toggle between grid and merged states with the buttons. Adjust blur
+    and cluster tightness live to find values that read as clean, distinct
+    blobs rather than a fuzzy smear or a sharp-edged pile of circles.
+    Once tuned, the winning values get hardcoded into riskJourney.js —
+    this page is not shipped as part of the final site.
+  </p>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="js/test-metaball.js"></script>
+</body>
+</html>
