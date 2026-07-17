@@ -628,11 +628,12 @@ body {
 }
 
 /* Resting state if GSAP never runs (load failure, JS disabled): show the
-   intro panel only, keep thresholds hidden. A single non-animated intro
-   panel is a sensible degraded state; two overlapping panels both fully
-   visible would read as broken, garbled text. */
+   intro panel only, keep the other two hidden. A single non-animated
+   intro panel is a sensible degraded state; three overlapping panels
+   all fully visible would read as broken, garbled text. */
 #risk-journey-intro { opacity: 1; }
 #risk-journey-thresholds { opacity: 0; }
+#risk-journey-profiling { opacity: 0; }
 
 .risk-journey__canvas {
   display: flex;

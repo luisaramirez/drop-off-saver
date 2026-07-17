@@ -509,6 +509,12 @@ function populateNarrativeCopy(data) {
     journeyCount.textContent = data.summary.total_students.toLocaleString();
   }
 
+  // --- Risk Journey section: at-risk count (profiling-framing panel) ---
+  const journeyAtRiskCount = document.getElementById("risk-journey-atrisk-count");
+  if (journeyAtRiskCount) {
+    journeyAtRiskCount.textContent = data.summary.at_risk_count.toLocaleString();
+  }
+
   // --- Risk threshold values: broadcast to every instance on the page ---
   // data.threshold is the configurable RISK_THRESHOLD (env var in notifier.py).
   // data.high_risk_cutoff is HIGH_RISK_CUTOFF — technically a fixed constant

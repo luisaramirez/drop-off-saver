@@ -60,15 +60,22 @@
   <!-- ═══════════════════════════════════════════════════════════
        SECTION 1.5: RISK JOURNEY — scroll-driven dot narrative
        This section will grow across further phases into the full
-       merge/split/drill-down sequence. Placement (before vs. replacing
-       hero's stat cluster) is not yet finalized — revisit once the full
+       split/drill-down sequence. Placement (before vs. replacing hero's
+       stat cluster) is not yet finalized — revisit once the full
        sequence is built.
 
-       Copy has TWO stacked panels sharing one grid cell (see CSS), not
-       one static block. #risk-journey-intro is the resting state (visible
-       while dots are grey/appearing). #risk-journey-thresholds crossfades
-       in — synchronized with the dot color wash via one shared GSAP
-       timeline in riskJourney.js — as the user continues scrolling.
+       Copy has THREE stacked panels sharing one grid cell (see CSS), not
+       one static block:
+         #risk-journey-intro       — resting state (grey dots appearing)
+         #risk-journey-thresholds  — crossfades in during the colorwash
+                                      segment of riskJourney.js's pinned
+                                      timeline
+         #risk-journey-profiling   — crossfades in during that same
+                                      timeline's isolate segment, once
+                                      the healthy cluster has faded out
+       All three crossfades are driven by ONE shared GSAP timeline in
+       riskJourney.js (animateMainSequence), never independent triggers,
+       so copy and visuals can't drift out of sync with each other.
   ════════════════════════════════════════════════════════════ -->
   <section class="section section--risk-journey" id="risk-journey">
     <div class="section__inner">
@@ -111,6 +118,18 @@
                 <span>Safe  &lt; <span class="value-risk-threshold">0.60</span></span>
               </div>
             </div>
+          </div>
+
+          <div class="risk-journey__copy-panel" id="risk-journey-profiling">
+            <div class="section__label" aria-hidden="true">Risk Journey — Step 3</div>
+            <h2 class="section__heading">
+              Now, a closer look at who's at risk.
+            </h2>
+            <p class="section__body">
+              <span id="risk-journey-atrisk-count">90</span> students need
+              attention. Each one fits one of three behavioral profiles —
+              and each profile points to a different retention strategy.
+            </p>
           </div>
 
         </div>
