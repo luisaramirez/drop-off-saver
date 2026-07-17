@@ -50,3 +50,4 @@ The goal is to use visual elements/shapes to represent students and the data we 
   - Updating the front-end (index.html, main.css and app.js) to display the proposed interactive visual narrative, as well as replacing all hardcoded values with dynamic placeholders that represent real data from our CSV source of truth.
   - Defining scroll zones for the dots grid entrance and coloring animations
   - Test-metaball HTML and JS files added as a separate module to test the dots animation before full integration.
+  - Merge tested blob animation into the actual scroll motion to go from a dot grid into two circular shapes (safe and at-risk students).
