@@ -10,6 +10,20 @@
  * cluster tightness) let us find values that read as clean, distinct
  * blobs rather than a fuzzy smear or a sharp pile of overlapping circles.
  *
+ * TUNED VALUES (found via this test page): stdDeviation 3.5, tightness
+ * k=4. Both carry over directly into riskJourney.js for Phase 4.
+ *
+ * FINDING TO CARRY OVER: the goo filter must be toggled on/off (see
+ * setGooFilterActive below), never applied permanently. Applying it as
+ * a constant attribute — as this file originally did, hardcoded in the
+ * HTML — softens every circle's edges even in the grid state, where
+ * dots are spread apart and never overlap. feGaussianBlur blurs
+ * regardless of proximity, and the feColorMatrix resharpening step
+ * doesn't perfectly restore the original crisp edge on individually-
+ * blurred shapes. The filter should exist only while circles are
+ * actually close enough to blend — i.e. during and immediately after a
+ * merge — never during a resting grid/spread-out state.
+ *
  * Once tuned, the winning constants get carried over into riskJourney.js
  * for the real Phase 4 integration — this file itself is not shipped.
  */
@@ -39,7 +53,7 @@ let circles = [];
 let healthyCount = 0;
 let atRiskCount = 0;
 let currentState = "grid";
-let currentK = 6;
+let currentK = 4;
 
 // ---------------------------------------------------------------------------
 // DOM references
@@ -181,6 +195,35 @@ function targetPositionFor(circle, k) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Toggles the goo filter on/off the dots group.
+ *
+ * This is the fix for a real problem found while tuning: applying
+ * filter="url(#goo)" permanently (as this test originally had it,
+ * hardcoded in the HTML) softens EVERY circle's edges all the time —
+ * including the grid state, where dots are spread apart and never
+ * overlap. feGaussianBlur blurs each circle's edge regardless of whether
+ * merging is happening, and feColorMatrix's resharpening step doesn't
+ * perfectly restore the original crisp circle — some softness/distortion
+ * remains on individually-blurred shapes.
+ *
+ * The filter should only exist while circles are actually close enough
+ * to blend into each other — i.e. while merged/merging. Toggling it via
+ * an attribute right before the merge tween starts, and removing it
+ * right before the grid tween starts, keeps the crisp grid state
+ * genuinely crisp, with the goo effect reserved for exactly the moment
+ * it's needed.
+ *
+ * @param {boolean} active
+ */
+function setGooFilterActive(active) {
+  if (active) {
+    dotsGroup.setAttribute("filter", "url(#goo)");
+  } else {
+    dotsGroup.removeAttribute("filter");
+  }
+}
+
+/**
  * Animates every circle to its merged cluster position.
  *
  * @param {boolean} animate - true for the full reveal transition (used on
@@ -230,6 +273,7 @@ btnMerge.addEventListener("click", () => {
   currentState = "merged";
   btnMerge.classList.add("test-btn--active");
   btnGrid.classList.remove("test-btn--active");
+  setGooFilterActive(true);
   applyMergedPositions(true);
 });
 
@@ -237,6 +281,7 @@ btnGrid.addEventListener("click", () => {
   currentState = "grid";
   btnGrid.classList.add("test-btn--active");
   btnMerge.classList.remove("test-btn--active");
+  setGooFilterActive(false);
   applyGridPositions(true);
 });
 
