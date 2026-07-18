@@ -671,6 +671,27 @@ body {
 .risk-journey__dot[data-risk-label="MEDIUM"] { fill: var(--c-yellow); }
 .risk-journey__dot[data-risk-label="LOW"]    { fill: var(--c-green); }
 
+/* Cluster labels (count + profile name) that fade in above each blob
+   during the "profiles" segment of animateMainSequence. Two tspans per
+   label — count on the first line, name on the second — built
+   programmatically in _createProfileLabels, not static markup, since
+   position depends on each profile's actual blob radius (which itself
+   depends on live student counts). */
+.risk-journey__cluster-label-count {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  fill: var(--c-text-primary);
+}
+
+.risk-journey__cluster-label-name {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  fill: var(--c-text-secondary);
+}
+
 @media (max-width: 900px) {
   .risk-journey__layout {
     grid-template-columns: 1fr;

@@ -95,7 +95,7 @@ const GRID_MARGIN = 20;            // padding inside the SVG viewBox
 // feeling like a single unbroken moment.
 //
 // mainEnd uses "+=N" (a fixed pixel distance from mainStart) rather than
-// another "top/bottom %" string. With three sequential segments packed
+// another "top/bottom %" string. With four sequential segments packed
 // into one pinned range, a fixed distance is far more predictable to
 // reason about and tune than tracking how "top X%" and "bottom Y%"
 // interact — that math only gets harder to reason about as more content
@@ -107,7 +107,7 @@ const SCROLL_ZONES = {
   entranceStart: "top 85%",
   entranceEnd: "top 0%",
   mainStart: "top 5%",
-  mainEnd: "+=2600",
+  mainEnd: "+=3400",
 };
 
 // Cluster merge constants — proven via the isolated test page
@@ -127,6 +127,26 @@ const MERGE_CENTROID_Y_FRAC = 0.5;
 // stays proportional to student count — a cluster with 6x more students
 // gets roughly 6x more area, not 6x the radius.
 const CLUSTER_TIGHTNESS_K = 4;
+
+// Profile split constants. Once the healthy cluster is gone, the freed-up
+// canvas width is used for three evenly-spaced centroids — rather than
+// cramming the split into the narrow region the at-risk blob previously
+// occupied (which was only ever sized for one blob, not three). Order
+// (left to right) and colors match the SAME profile identity used
+// everywhere else on the page (roster badges, profile breakdown chart) —
+// profiler.py assigns these labels, this is just reusing them, never
+// inventing a new mapping here.
+const PROFILE_CENTROID_FRACS = {
+  "Time-Constrained": { x: 0.2, y: 0.5 },
+  "Disengaged Learner": { x: 0.5, y: 0.5 },
+  "Quiet Decliner": { x: 0.8, y: 0.5 },
+};
+
+const PROFILE_COLOR_VARS = {
+  "Time-Constrained": "--c-violet",
+  "Disengaged Learner": "--c-cyan",
+  "Quiet Decliner": "--c-rose",
+};
 
 // ---------------------------------------------------------------------------
 // Data ingestion
@@ -275,6 +295,11 @@ function renderDotGrid(container, students) {
     circle.setAttribute("class", "risk-journey__dot");
     circle.dataset.userId = student.user_id;
     circle.dataset.riskLabel = student.risk_label;
+    // Sourced directly from profiler.py's real K-Means output, never
+    // reclustered or reinterpreted client-side. Empty string for safe
+    // students (risk_profile is null for them) — irrelevant for those
+    // circles since they never take part in the profile-split segment.
+    circle.dataset.profileLabel = student.risk_profile ? student.risk_profile.label : "";
     circle.dataset.gridX = x;
     circle.dataset.gridY = y;
     circle.dataset.jitterAngle = Math.random() * Math.PI * 2;
@@ -411,6 +436,110 @@ function _targetMergePosition(circle, centroids, healthyCount, atRiskCount, k) {
 }
 
 /**
+ * Computes the three profile centroid points as actual pixel coordinates,
+ * evenly spread across the FULL viewBox width — once the healthy cluster
+ * has faded out, that space is free to use, rather than cramming three
+ * blobs into the narrower region the single at-risk blob previously
+ * occupied.
+ *
+ * @param {number} viewWidth
+ * @param {number} viewHeight
+ * @returns {{ [profileLabel: string]: {x, y} }}
+ */
+function _computeProfileCentroids(viewWidth, viewHeight) {
+  const centroids = {};
+  Object.keys(PROFILE_CENTROID_FRACS).forEach((label) => {
+    const frac = PROFILE_CENTROID_FRACS[label];
+    centroids[label] = { x: viewWidth * frac.x, y: viewHeight * frac.y };
+  });
+  return centroids;
+}
+
+/**
+ * Computes an at-risk circle's target (x, y) once it splits into its
+ * profile sub-cluster, reusing the SAME fixed jitter angle/fraction
+ * assigned back in renderDotGrid — each circle keeps one stable random
+ * "personality" reused across every clustering stage (2-cluster merge,
+ * then 3-cluster profile split), rather than being re-randomized at
+ * every stage.
+ *
+ * @param {SVGElement} circle
+ * @param {object} centroids - From _computeProfileCentroids
+ * @param {object} profileBreakdown - data.summary.risk_profile_breakdown
+ * @param {number} k - Tightness constant
+ */
+function _targetProfilePosition(circle, centroids, profileBreakdown, k) {
+  const label = circle.dataset.profileLabel;
+  const centroid = centroids[label];
+  if (!centroid) return null; // defensive: unexpected/missing profile label
+
+  const count = profileBreakdown[label] || 1;
+  const radius = _clusterRadius(count, k);
+  const angle = parseFloat(circle.dataset.jitterAngle);
+  const frac = parseFloat(circle.dataset.jitterFraction);
+
+  return {
+    x: centroid.x + radius * frac * Math.cos(angle),
+    y: centroid.y + radius * frac * Math.sin(angle),
+  };
+}
+
+/**
+ * Creates one <text> label per profile (count + name, two lines via
+ * tspans), positioned above where that profile's blob will end up —
+ * offset upward by that specific blob's own radius, so the label clears
+ * the blob regardless of how large or small that profile's cluster is.
+ * Matches the original spec requirement that profile clusters show their
+ * student count in numbers, not just convey it through blob size alone.
+ *
+ * Appended directly to the SVG root (not the dots group), since labels
+ * should never be affected by the goo filter applied to dotsGroup.
+ * Starts at opacity 0 — animateMainSequence fades them in once the
+ * profile-split segment plays.
+ *
+ * @param {SVGElement} svg
+ * @param {object} centroids - From _computeProfileCentroids
+ * @param {object} profileBreakdown - data.summary.risk_profile_breakdown
+ * @param {number} k - Tightness constant
+ * @returns {SVGTextElement[]}
+ */
+function _createProfileLabels(svg, centroids, profileBreakdown, k) {
+  const svgNS = "http://www.w3.org/2000/svg";
+  const labels = [];
+
+  Object.keys(PROFILE_CENTROID_FRACS).forEach((profileLabel) => {
+    const centroid = centroids[profileLabel];
+    const count = profileBreakdown[profileLabel] || 0;
+    const radius = _clusterRadius(count, k);
+
+    const text = document.createElementNS(svgNS, "text");
+    text.setAttribute("class", "risk-journey__cluster-label");
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("x", centroid.x);
+    text.setAttribute("y", centroid.y - radius - 14);
+    text.style.opacity = "0";
+
+    const countSpan = document.createElementNS(svgNS, "tspan");
+    countSpan.setAttribute("class", "risk-journey__cluster-label-count");
+    countSpan.setAttribute("x", centroid.x);
+    countSpan.textContent = String(count);
+
+    const nameSpan = document.createElementNS(svgNS, "tspan");
+    nameSpan.setAttribute("class", "risk-journey__cluster-label-name");
+    nameSpan.setAttribute("x", centroid.x);
+    nameSpan.setAttribute("dy", "16");
+    nameSpan.textContent = profileLabel;
+
+    text.appendChild(countSpan);
+    text.appendChild(nameSpan);
+    svg.appendChild(text);
+    labels.push(text);
+  });
+
+  return labels;
+}
+
+/**
  * Stage 1 — entrance. Dots grow from radius 0 to full size as the user
  * scrolls through this stage's dedicated range.
  *
@@ -448,13 +577,15 @@ function animateDotEntrance(circles) {
 }
 
 /**
- * Stage 2 — ONE continuous pinned timeline covering three sequential
- * segments: color wash + copy crossfade, merge into two clusters, then
- * isolate the at-risk cluster. All three share a single gsap.timeline()
- * and a single ScrollTrigger, using GSAP labels ("colorwash", "merge",
- * "isolate") to sequence them — not three separate ScrollTriggers, which
- * would mean pinning/unpinning/re-pinning between each segment and
- * reading as a jarring flicker rather than one continuous moment.
+ * Stage 2 — ONE continuous pinned timeline covering four sequential
+ * segments: color wash + copy crossfade, merge into two clusters,
+ * isolate the at-risk cluster (turning it solid red), then split that
+ * red mass into three profile blobs. All four share a single
+ * gsap.timeline() and a single ScrollTrigger, using GSAP labels
+ * ("colorwash", "merge", "isolate", "profiles") to sequence them — not
+ * four separate ScrollTriggers, which would mean pinning/unpinning/
+ * re-pinning between each segment and reading as a jarring flicker
+ * rather than one continuous moment.
  *
  * PINNED: this stage locks #risk-journey in place on screen for its
  * entire scroll range (SCROLL_ZONES.mainStart → mainEnd). Nothing on
@@ -466,19 +597,31 @@ function animateDotEntrance(circles) {
  * Segment breakdown:
  *   "colorwash" — dot fill washes from grey to risk-tier color; left
  *                 copy crossfades from the intro panel to the threshold
- *                 legend panel. (Unchanged from the previous phase.)
+ *                 legend panel.
  *   "merge"     — the goo filter turns on; every dot animates from its
  *                 grid position to a jittered position within one of two
  *                 cluster centroids (healthy or at-risk), blending into
  *                 two organic blobs.
- *   "isolate"   — the healthy blob fades out entirely, leaving only the
- *                 at-risk blob on screen; left copy crossfades again,
- *                 from the threshold legend to a profiling-framing panel.
+ *   "isolate"   — the healthy blob fades out entirely AND the at-risk
+ *                 blob turns uniformly red (previously a HIGH/MEDIUM mix
+ *                 of red/yellow from the colorwash stage) — one settled
+ *                 color representing "the at-risk group" as a single
+ *                 mass, before the next segment reinterprets it through
+ *                 a different lens. Left copy crossfades again, from the
+ *                 threshold legend to a profiling-framing panel.
+ *   "profiles"  — the single red mass splits into three blobs, one per
+ *                 behavioral profile (Time-Constrained, Disengaged
+ *                 Learner, Quiet Decliner), each colored with that
+ *                 profile's own established color (matching the roster
+ *                 badges and profile breakdown chart elsewhere on the
+ *                 page) and sized proportional to its real membership
+ *                 count from profiler.py. A count+name label fades in
+ *                 above each.
  *
  * Uses scrub (not once) throughout because a live, reversible link to
  * scroll position means scrolling back up genuinely reverses every
- * segment — un-isolating, un-merging, un-coloring — not just the last
- * one triggered.
+ * segment — un-splitting, un-isolating, un-merging, un-coloring — not
+ * just the last one triggered.
  *
  * @param {SVGGElement} dotsGroup - The <g> wrapping all dot circles
  * @param {SVGElement[]} circles - The <circle> elements to animate
@@ -486,11 +629,16 @@ function animateDotEntrance(circles) {
  */
 function animateMainSequence(dotsGroup, circles, data) {
   const greyColor = _resolveCSSColor("--c-border");
+  const redColor = _resolveCSSColor("--c-red");
   const riskColorMap = {
     HIGH: _resolveCSSColor("--c-red"),
     MEDIUM: _resolveCSSColor("--c-yellow"),
     LOW: _resolveCSSColor("--c-green"),
   };
+  const profileColorMap = {};
+  Object.keys(PROFILE_COLOR_VARS).forEach((label) => {
+    profileColorMap[label] = _resolveCSSColor(PROFILE_COLOR_VARS[label]);
+  });
 
   gsap.set(circles, { fill: greyColor });
 
@@ -506,11 +654,14 @@ function animateMainSequence(dotsGroup, circles, data) {
   );
   const healthyCount = data.summary.safe_count;
   const atRiskCount = data.summary.at_risk_count;
+  const profileBreakdown = data.summary.risk_profile_breakdown || {};
 
   // Read the actual rendered viewBox dimensions so cluster centroids are
   // correctly positioned regardless of dataset size.
-  const viewBox = dotsGroup.ownerSVGElement.viewBox.baseVal;
+  const svg = dotsGroup.ownerSVGElement;
+  const viewBox = svg.viewBox.baseVal;
   const centroids = _computeClusterCentroids(viewBox.width, viewBox.height);
+  const profileCentroids = _computeProfileCentroids(viewBox.width, viewBox.height);
 
   // Precompute each circle's merge target ONCE (not per-frame inside the
   // tween) — cheap, and keeps the tween's per-property functions trivial
@@ -520,6 +671,19 @@ function animateMainSequence(dotsGroup, circles, data) {
     circle.dataset.mergeTargetX = pos.x;
     circle.dataset.mergeTargetY = pos.y;
   });
+
+  // Precompute each at-risk circle's profile-split target the same way.
+  // Only at-risk circles participate — healthy circles are already faded
+  // out by the time this segment plays and never rejoin.
+  atRiskCircles.forEach((circle) => {
+    const pos = _targetProfilePosition(circle, profileCentroids, profileBreakdown, CLUSTER_TIGHTNESS_K);
+    if (pos) {
+      circle.dataset.profileTargetX = pos.x;
+      circle.dataset.profileTargetY = pos.y;
+    }
+  });
+
+  const profileLabels = _createProfileLabels(svg, profileCentroids, profileBreakdown, CLUSTER_TIGHTNESS_K);
 
   const tl = gsap.timeline({
     scrollTrigger: {
@@ -568,6 +732,10 @@ function animateMainSequence(dotsGroup, circles, data) {
   );
 
   // --- Segment: isolate ---
+  // Healthy blob fades out AND the at-risk blob turns uniformly red at
+  // the same time — both are part of the same narrative beat: "here is
+  // the at-risk group, as one thing" (as opposed to the HIGH/MEDIUM
+  // color mix it inherited from the colorwash segment).
   tl.addLabel("isolate", "+=0.3");
   tl.to(
     healthyCircles,
@@ -577,10 +745,55 @@ function animateMainSequence(dotsGroup, circles, data) {
     },
     "isolate"
   );
+  tl.to(
+    atRiskCircles,
+    {
+      fill: redColor,
+      stagger: { amount: 0.4, from: "random" },
+    },
+    "isolate"
+  );
   if (thresholdPanel && profilingPanel) {
     tl.to(thresholdPanel, { opacity: 0, duration: 0.4 }, "isolate");
     tl.to(profilingPanel, { opacity: 1, duration: 0.4 }, "isolate");
   }
+
+  // --- Segment: profiles ---
+  // The single red mass differentiates into three profile blobs — both
+  // position AND color change together in one motion, since the blob is
+  // simultaneously moving apart and taking on a new identity. Sized
+  // proportional to each profile's REAL membership count from
+  // profiler.py (via data.summary.risk_profile_breakdown), never an
+  // even/arbitrary split.
+  tl.addLabel("profiles", "+=0.3");
+  tl.to(
+    atRiskCircles,
+    {
+      duration: 1,
+      attr: {
+        cx: (index, target) => {
+          const x = target.dataset.profileTargetX;
+          return x !== undefined ? parseFloat(x) : parseFloat(target.getAttribute("cx"));
+        },
+        cy: (index, target) => {
+          const y = target.dataset.profileTargetY;
+          return y !== undefined ? parseFloat(y) : parseFloat(target.getAttribute("cy"));
+        },
+      },
+      fill: (index, target) => profileColorMap[target.dataset.profileLabel] || redColor,
+      stagger: { amount: 0.9, from: "random" },
+    },
+    "profiles"
+  );
+  tl.to(
+    profileLabels,
+    {
+      opacity: 1,
+      duration: 0.5,
+      stagger: 0.1,
+    },
+    "profiles+=0.6"
+  );
 }
 
 /**
