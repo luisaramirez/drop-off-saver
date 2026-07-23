@@ -692,6 +692,18 @@ body {
   fill: var(--c-text-secondary);
 }
 
+/* The three solid circles that the blobs resolve into during the
+   "resolve" segment of animateMainSequence — one per behavioral profile.
+   No stroke/border by default; fill color is set directly in JS per
+   profile (_createResolvedCircles), not here, since it depends on live
+   data (which profile, which color token). Transition on fill/stroke
+   only — never on opacity, which stays GSAP-controlled during the fade-in
+   (a CSS transition racing GSAP's own opacity tween would fight it, the
+   same lesson learned with .risk-journey__dot's fill in Phase 2/3). */
+.risk-journey__resolved-circle {
+  stroke: none;
+}
+
 @media (max-width: 900px) {
   .risk-journey__layout {
     grid-template-columns: 1fr;

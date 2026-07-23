@@ -3,10 +3,11 @@
  * ===============================================
  * Renders the "Students don't disappear, they fade" interactive sequence:
  * student dots that animate in, wash into risk color, merge into two
- * clusters (healthy / at-risk), then isolate the at-risk cluster alone
- * on screen — all as the user scrolls through one continuous pinned
- * section. Splitting the at-risk cluster into three clickable behavioral
- * profiles with a student-level drill-down comes in later phases.
+ * clusters (healthy / at-risk), isolate the at-risk cluster, split it
+ * into three behavioral profile blobs, then resolve those blobs into
+ * clean solid circles — all as the user scrolls through one continuous
+ * pinned section. Click interactivity on those resolved circles (detail
+ * panel, student drill-down) comes in later phases.
  *
  * Kept as a SEPARATE module from charts.js on purpose. charts.js owns the
  * Chart.js bar charts (distribution histogram, profile breakdown bars).
@@ -19,12 +20,13 @@
  *   - Fetch predictions.json (independently of app.js's fetch — see note
  *     in loadJourneyData() below)
  *   - Lay out one <circle> per student in a grid inside an SVG canvas,
- *     each pre-assigned a fixed jitter angle/fraction for its eventual
- *     cluster position (renderDotGrid)
+ *     each pre-assigned a fixed jitter angle/fraction reused across every
+ *     later clustering stage, and a profileLabel sourced directly from
+ *     profiler.py's real K-Means output (renderDotGrid)
  *   - Dots grow in with a scroll-scrubbed staggered entrance as the
  *     section scrolls into view (animateDotEntrance) — NOT pinned, the
  *     page scrolls normally during this stage
- *   - ONE continuous PINNED sequence (animateMainSequence) covers three
+ *   - ONE continuous PINNED sequence (animateMainSequence) covers five
  *     labeled segments sharing a single GSAP timeline + ScrollTrigger,
  *     so they can never drift out of sync and never flicker between
  *     separate pin/unpin transitions:
@@ -33,9 +35,21 @@
  *       "merge"     — goo filter turns on; dots animate into two organic
  *                     blobs (healthy / at-risk), area-proportional to
  *                     each cluster's actual student count
- *       "isolate"   — healthy blob fades out entirely; left copy
- *                     crossfades threshold panel → profiling-framing
- *                     panel, leaving only the at-risk blob on screen
+ *       "isolate"   — healthy blob fades out; at-risk blob turns solid
+ *                     red AND re-centers (was off-center to make room
+ *                     for the healthy blob, now it's the only subject);
+ *                     left copy crossfades to a profiling-framing panel
+ *       "profiles"  — the red mass splits into three blobs, one per
+ *                     behavioral profile, each colored with that
+ *                     profile's established color and sized by its real
+ *                     membership count; count+name labels fade in above
+ *                     each, positioned with enough clearance to never
+ *                     overlap the blob (PROFILE_LABEL_CLEARANCE)
+ *       "resolve"   — goo filter turns off; the many small per-profile
+ *                     dots fade out as three solid, clean circles fade
+ *                     in at the same centroid + radius — consolidation,
+ *                     not a jarring swap. This has to happen before any
+ *                     click handling gets wired up in a later phase
  *   - The goo filter (SVG defs built programmatically in renderDotGrid)
  *     is toggled on/off via setGooFilterActive, NEVER applied
  *     permanently — proven necessary via test-metaball.html, where a
@@ -55,8 +69,6 @@
  *     correct
  *
  * Not yet built:
- *   Phase 5 — split at-risk cluster into 3 profile blobs
- *   Phase 6 — resolve blobs into clickable labeled circles
  *   Phase 7 — click → detail panel (profile breakdown + strategy)
  *   Phase 8 — click → student-level drill-down grid
  *   Phase 9 — mobile pass
@@ -107,7 +119,7 @@ const SCROLL_ZONES = {
   entranceStart: "top 85%",
   entranceEnd: "top 0%",
   mainStart: "top 5%",
-  mainEnd: "+=3400",
+  mainEnd: "+=4200",
 };
 
 // Cluster merge constants — proven via the isolated test page
@@ -119,6 +131,14 @@ const SCROLL_ZONES = {
 const MERGE_CENTROID_HEALTHY_X_FRAC = 0.28;
 const MERGE_CENTROID_AT_RISK_X_FRAC = 0.72;
 const MERGE_CENTROID_Y_FRAC = 0.5;
+
+// Once the healthy cluster fades out during "isolate", the at-risk blob
+// re-centers here (0.5 = canvas center) rather than staying at its
+// off-center merge position (0.72) — visually, a single remaining blob
+// sitting off to one side reads as unbalanced/incidental; centering it
+// signals "this is now the subject" instead of "this is what's left of
+// a two-blob layout."
+const ISOLATE_CENTROID_X_FRAC = 0.5;
 
 // Cluster "tightness" — how densely packed each blob is. Tuned to 4 via
 // test-metaball.html's live slider; smaller = tighter/denser blobs,
@@ -147,6 +167,13 @@ const PROFILE_COLOR_VARS = {
   "Disengaged Learner": "--c-cyan",
   "Quiet Decliner": "--c-rose",
 };
+
+// Vertical clearance between a blob's top edge and its label's first
+// text line. The label is TWO lines (count + name, see
+// _createProfileLabels), so this needs to clear the ENTIRE two-line
+// block, not just one line — too small a value here was the original
+// cause of the name line nearly touching/overlapping the blob.
+const PROFILE_LABEL_CLEARANCE = 34;
 
 // ---------------------------------------------------------------------------
 // Data ingestion
@@ -516,7 +543,7 @@ function _createProfileLabels(svg, centroids, profileBreakdown, k) {
     text.setAttribute("class", "risk-journey__cluster-label");
     text.setAttribute("text-anchor", "middle");
     text.setAttribute("x", centroid.x);
-    text.setAttribute("y", centroid.y - radius - 14);
+    text.setAttribute("y", centroid.y - radius - PROFILE_LABEL_CLEARANCE);
     text.style.opacity = "0";
 
     const countSpan = document.createElementNS(svgNS, "tspan");
@@ -537,6 +564,55 @@ function _createProfileLabels(svg, centroids, profileBreakdown, k) {
   });
 
   return labels;
+}
+
+/**
+ * Creates one solid, clean <circle> per profile — NOT part of dotsGroup,
+ * so the goo filter never applies to these regardless of dotsGroup's
+ * filter state. This is the "resolve" segment's destination shape: many
+ * small individual dots (the blob) fade out, these three fade in at the
+ * exact same centroid + radius the blob occupied, so the transition
+ * reads as consolidation rather than a jarring size/position jump.
+ *
+ * Kept deliberately separate from the profile labels (a different
+ * element, created in its own function) — labels persist unchanged
+ * across both the blob and resolved-circle states (same centroid, same
+ * radius, so no label repositioning is needed either), while these
+ * circles are new elements specific to the resolved state.
+ *
+ * Starts at opacity 0 — animateMainSequence fades them in during the
+ * "resolve" segment, as the individual dots fade out.
+ *
+ * @param {SVGElement} svg
+ * @param {object} centroids - From _computeProfileCentroids
+ * @param {object} profileBreakdown - data.summary.risk_profile_breakdown
+ * @param {number} k - Tightness constant
+ * @param {object} colorMap - profileLabel -> resolved CSS color string
+ * @returns {{ [profileLabel: string]: SVGCircleElement }}
+ */
+function _createResolvedCircles(svg, centroids, profileBreakdown, k, colorMap) {
+  const svgNS = "http://www.w3.org/2000/svg";
+  const circles = {};
+
+  Object.keys(PROFILE_CENTROID_FRACS).forEach((profileLabel) => {
+    const centroid = centroids[profileLabel];
+    const count = profileBreakdown[profileLabel] || 0;
+    const radius = _clusterRadius(count, k);
+
+    const circle = document.createElementNS(svgNS, "circle");
+    circle.setAttribute("class", "risk-journey__resolved-circle");
+    circle.setAttribute("cx", centroid.x);
+    circle.setAttribute("cy", centroid.y);
+    circle.setAttribute("r", radius);
+    circle.setAttribute("fill", colorMap[profileLabel]);
+    circle.dataset.profileLabel = profileLabel;
+    circle.style.opacity = "0";
+
+    svg.appendChild(circle);
+    circles[profileLabel] = circle;
+  });
+
+  return circles;
 }
 
 /**
@@ -602,13 +678,16 @@ function animateDotEntrance(circles) {
  *                 grid position to a jittered position within one of two
  *                 cluster centroids (healthy or at-risk), blending into
  *                 two organic blobs.
- *   "isolate"   — the healthy blob fades out entirely AND the at-risk
- *                 blob turns uniformly red (previously a HIGH/MEDIUM mix
- *                 of red/yellow from the colorwash stage) — one settled
- *                 color representing "the at-risk group" as a single
- *                 mass, before the next segment reinterprets it through
- *                 a different lens. Left copy crossfades again, from the
- *                 threshold legend to a profiling-framing panel.
+ *   "isolate"   — the healthy blob fades out entirely. AT THE SAME TIME,
+ *                 the at-risk blob turns uniformly red (previously a
+ *                 HIGH/MEDIUM mix of red/yellow from the colorwash
+ *                 stage) AND re-centers horizontally (it was off-center
+ *                 at 72% width, sharing the canvas with the healthy
+ *                 blob — now that it's the only thing left, it moves to
+ *                 50% width so it reads as "the subject", not "what's
+ *                 left of a two-blob layout"). Left copy crossfades
+ *                 again, from the threshold legend to a profiling-
+ *                 framing panel.
  *   "profiles"  — the single red mass splits into three blobs, one per
  *                 behavioral profile (Time-Constrained, Disengaged
  *                 Learner, Quiet Decliner), each colored with that
@@ -617,11 +696,19 @@ function animateDotEntrance(circles) {
  *                 page) and sized proportional to its real membership
  *                 count from profiler.py. A count+name label fades in
  *                 above each.
+ *   "resolve"   — the goo filter turns off, and the many small dots that
+ *                 made up each blob fade out as three solid, clean
+ *                 circles fade in at the exact same centroid + radius —
+ *                 consolidation, not a jarring shape swap. This is the
+ *                 "blobs become circles" step that has to happen BEFORE
+ *                 click interactivity is wired up in a later phase —
+ *                 clicking one of 20-38 overlapping small dots per
+ *                 profile is unreliable; clicking one solid circle is not.
  *
  * Uses scrub (not once) throughout because a live, reversible link to
  * scroll position means scrolling back up genuinely reverses every
- * segment — un-splitting, un-isolating, un-merging, un-coloring — not
- * just the last one triggered.
+ * segment — un-resolving, un-splitting, un-isolating, un-merging,
+ * un-coloring — not just the last one triggered.
  *
  * @param {SVGGElement} dotsGroup - The <g> wrapping all dot circles
  * @param {SVGElement[]} circles - The <circle> elements to animate
@@ -672,6 +759,20 @@ function animateMainSequence(dotsGroup, circles, data) {
     circle.dataset.mergeTargetY = pos.y;
   });
 
+  // Precompute each at-risk circle's ISOLATE (re-centered) target. Reuses
+  // the merge target's Y and jittered arrangement exactly — only X shifts,
+  // by the same fixed delta for every circle in the cluster (the distance
+  // between the merge centroid's x and the canvas center). This slides
+  // the whole blob to center as one rigid unit rather than recomputing a
+  // fresh jitter arrangement, which would visually "reshuffle" the dots
+  // for no reason.
+  const isolateCentroidX = viewBox.width * ISOLATE_CENTROID_X_FRAC;
+  const isolateDeltaX = isolateCentroidX - centroids.atRisk.x;
+  atRiskCircles.forEach((circle) => {
+    circle.dataset.isolateTargetX = parseFloat(circle.dataset.mergeTargetX) + isolateDeltaX;
+    circle.dataset.isolateTargetY = circle.dataset.mergeTargetY;
+  });
+
   // Precompute each at-risk circle's profile-split target the same way.
   // Only at-risk circles participate — healthy circles are already faded
   // out by the time this segment plays and never rejoin.
@@ -684,6 +785,7 @@ function animateMainSequence(dotsGroup, circles, data) {
   });
 
   const profileLabels = _createProfileLabels(svg, profileCentroids, profileBreakdown, CLUSTER_TIGHTNESS_K);
+  const resolvedCircles = _createResolvedCircles(svg, profileCentroids, profileBreakdown, CLUSTER_TIGHTNESS_K, profileColorMap);
 
   const tl = gsap.timeline({
     scrollTrigger: {
@@ -732,10 +834,10 @@ function animateMainSequence(dotsGroup, circles, data) {
   );
 
   // --- Segment: isolate ---
-  // Healthy blob fades out AND the at-risk blob turns uniformly red at
-  // the same time — both are part of the same narrative beat: "here is
-  // the at-risk group, as one thing" (as opposed to the HIGH/MEDIUM
-  // color mix it inherited from the colorwash segment).
+  // Three things happen together, all part of the same narrative beat
+  // ("here is the at-risk group, as one centered thing"): the healthy
+  // blob fades out, the at-risk blob turns solid red, and it re-centers
+  // horizontally instead of staying at its off-center merge position.
   tl.addLabel("isolate", "+=0.3");
   tl.to(
     healthyCircles,
@@ -748,7 +850,12 @@ function animateMainSequence(dotsGroup, circles, data) {
   tl.to(
     atRiskCircles,
     {
+      duration: 1,
       fill: redColor,
+      attr: {
+        cx: (index, target) => parseFloat(target.dataset.isolateTargetX),
+        cy: (index, target) => parseFloat(target.dataset.isolateTargetY),
+      },
       stagger: { amount: 0.4, from: "random" },
     },
     "isolate"
@@ -793,6 +900,34 @@ function animateMainSequence(dotsGroup, circles, data) {
       stagger: 0.1,
     },
     "profiles+=0.6"
+  );
+
+  // --- Segment: resolve ---
+  // Blobs become clean circles. The goo filter turns off (no longer
+  // needed — nothing is blending anymore), the many small at-risk dots
+  // fade out, and the three solid resolved circles (created upfront,
+  // starting at opacity 0) fade in at the exact same position + radius
+  // the blob occupied. Deliberately sequenced BEFORE any click handling
+  // gets wired up in a later phase.
+  tl.addLabel("resolve", "+=0.3");
+  tl.call(() => setGooFilterActive(dotsGroup, false), null, "resolve");
+  tl.to(
+    atRiskCircles,
+    {
+      opacity: 0,
+      duration: 0.6,
+      stagger: { amount: 0.4, from: "random" },
+    },
+    "resolve"
+  );
+  tl.to(
+    Object.values(resolvedCircles),
+    {
+      opacity: 1,
+      duration: 0.6,
+      stagger: 0.1,
+    },
+    "resolve+=0.2"
   );
 }
 
