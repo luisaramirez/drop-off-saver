@@ -92,12 +92,6 @@ body {
   width: 100%;
 }
 
-.section__inner--split {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4rem;
-  align-items: center;
-}
 
 .section__label {
   font-family: var(--font-mono);
@@ -131,134 +125,20 @@ body {
 
 
 /* ═══════════════════════════════════════════════════════════
-   HERO
+   RISK JOURNEY SCROLL CUE
+   Reuses .scroll-cue__line / @keyframes scroll-cue-pulse below,
+   originally written for the now-removed hero section — kept because
+   this is the same visual cue, just relocated.
 ════════════════════════════════════════════════════════════ */
-.section--hero {
-  position: relative;
-  min-height: 100vh;
-  justify-content: center;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* Scan-line grid — the "signature" element */
-.hero__bg-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(245, 166, 35, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(245, 166, 35, 0.04) 1px, transparent 1px);
-  background-size: 40px 40px;
-  mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 40%, transparent 100%);
-  pointer-events: none;
-}
-
-.hero__content {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 max(2rem, 5vw);
-  text-align: left;
-  position: relative;
-  z-index: 1;
-}
-
-.hero__eyebrow {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-amber);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  margin-bottom: 1.75rem;
-  opacity: 0;
-}
-
-.hero__headline {
-  font-family: var(--font-display);
-  font-size: var(--text-hero);
-  font-weight: 700;
-  line-height: 1.0;
-  letter-spacing: -0.03em;
-  margin-bottom: 2rem;
-  display: block;
-}
-
-.hero__headline-line {
-  display: block;
-  overflow: hidden;
-}
-
-.hero__headline-line--accent {
-  color: var(--c-amber);
-}
-
-.hero__subhead {
-  font-size: var(--text-xl);
-  color: var(--c-text-secondary);
-  max-width: 55ch;
-  line-height: 1.65;
-  margin-bottom: 3.5rem;
-  opacity: 0;
-}
-
-/* Stat cluster */
-.hero__stat-cluster {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 4rem;
-}
-
-.stat-card {
-  background: var(--c-bg-surface);
-  border: 1px solid var(--c-border);
-  border-radius: 8px;
-  padding: 1.25rem 1.75rem;
-  min-width: 160px;
-  transition: border-color 0.2s ease, transform 0.2s ease;
-}
-
-.stat-card--loading { opacity: 0.4; }
-.stat-card--loaded  { opacity: 1; transition: opacity 0.4s ease; }
-
-.stat-card--danger {
-  border-color: var(--c-amber-dim);
-  background: var(--c-amber-glow);
-}
-
-.stat-card:hover {
-  border-color: var(--c-amber-dim);
-  transform: translateY(-2px);
-}
-
-.stat-card__value {
-  display: block;
-  font-family: var(--font-display);
-  font-size: var(--text-3xl);
-  font-weight: 700;
-  line-height: 1;
-  margin-bottom: 0.4rem;
-  letter-spacing: -0.03em;
-}
-
-.stat-card--danger .stat-card__value { color: var(--c-amber); }
-
-.stat-card__label {
-  display: block;
-  font-size: var(--text-xs);
-  color: var(--c-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-/* Scroll cue */
-.hero__scroll-cue {
+.risk-journey__scroll-cue {
   display: flex;
   align-items: center;
   gap: 1rem;
+  margin-top: 2.5rem;
   opacity: 0;
 }
 
-.hero__scroll-cue span {
+.risk-journey__scroll-cue span {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--c-text-muted);
@@ -281,87 +161,64 @@ body {
 
 
 /* ═══════════════════════════════════════════════════════════
-   SIGNAL CARDS
+   SIGNAL LIST — Risk Journey "colorwash" panel content
+   Compact list format (title + weight + body per feature), not cards —
+   the copy-stack column is narrow (44ch max-width), so a card layout
+   with icons/padding/borders per feature wouldn't fit three of them
+   readably in one panel. Populated by app.js:populateSignalPanel().
 ════════════════════════════════════════════════════════════ */
-.section--signal { background-color: var(--c-bg); }
-
-.signal-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
-  margin-top: 3rem;
+.signal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
 }
 
-.signal-card {
-  background: var(--c-bg-surface);
-  border: 1px solid var(--c-border);
-  border-radius: 10px;
-  padding: 2rem 1.75rem;
-  opacity: 0;
-  transform: translateY(2rem);
-  transition: border-color 0.3s ease;
+.signal-list-item__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
 }
 
-.signal-card:hover { border-color: var(--c-amber-dim); }
-
-.signal-card__icon {
-  width: 40px;
-  height: 40px;
-  color: var(--c-amber);
-  margin-bottom: 1.25rem;
-}
-
-.signal-card__title {
-  font-size: var(--text-lg);
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-  letter-spacing: -0.01em;
-}
-
-.signal-card__body {
+.signal-list-item__title {
   font-size: var(--text-sm);
-  color: var(--c-text-secondary);
-  line-height: 1.65;
-  margin-bottom: 1.5rem;
+  font-weight: 600;
+  color: var(--c-text-primary);
 }
 
-.signal-card__weight { }
-
-.signal-card__weight-label {
-  display: block;
+.signal-list-item__weight {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  color: var(--c-text-muted);
-  margin-bottom: 0.5rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  color: var(--c-amber);
+  flex-shrink: 0;
 }
 
-.signal-card__weight-bar {
+.signal-list-item__body {
+  font-size: var(--text-xs);
+  color: var(--c-text-secondary);
+  line-height: 1.55;
+  margin-bottom: 0.5rem;
+}
+
+.signal-list-item__bar {
   height: 3px;
   background: var(--c-border);
   border-radius: 2px;
   overflow: hidden;
 }
 
-.signal-card__weight-fill {
+.signal-list-item__bar-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--c-amber-dim), var(--c-amber));
   border-radius: 2px;
-  transition: width 1.2s var(--ease-out-expo);
 }
 
 
 /* ═══════════════════════════════════════════════════════════
-   DISTRIBUTION CHART
+   LEGEND — reused by the "thresholds" Risk Journey panel
 ════════════════════════════════════════════════════════════ */
-.section--distribution { background-color: var(--c-bg-surface); }
-
-.section__chart-wrap {
-  position: relative;
-  height: 320px;
-}
-
 .legend {
   display: flex;
   flex-direction: column;
@@ -389,9 +246,9 @@ body {
 .legend__dot--safe   { background: var(--c-green); }
 
 
-/* Profile legend — used in the new Risk Profiles section. Unlike the
-   compact risk legend above, each item includes a short description,
-   so the layout needs more vertical room per row. */
+/* Profile legend — reused by the "demographics" Risk Journey panel.
+   Each item includes a short description, so the layout needs more
+   vertical room per row than the compact risk legend above. */
 .profile-legend {
   display: flex;
   flex-direction: column;
@@ -429,12 +286,6 @@ body {
   color: var(--c-text-secondary);
   line-height: 1.5;
   max-width: 42ch;
-}
-
-.section--profiles { background-color: var(--c-bg); }
-
-.section__chart-wrap--profiles {
-  height: 280px;
 }
 
 
@@ -628,12 +479,14 @@ body {
 }
 
 /* Resting state if GSAP never runs (load failure, JS disabled): show the
-   intro panel only, keep the other two hidden. A single non-animated
-   intro panel is a sensible degraded state; three overlapping panels
+   intro panel only, keep the other four hidden. A single non-animated
+   intro panel is a sensible degraded state; five overlapping panels
    all fully visible would read as broken, garbled text. */
 #risk-journey-intro { opacity: 1; }
+#risk-journey-signal { opacity: 0; }
 #risk-journey-thresholds { opacity: 0; }
 #risk-journey-profiling { opacity: 0; }
+#risk-journey-demographics { opacity: 0; }
 
 .risk-journey__canvas {
   display: flex;
@@ -709,6 +562,8 @@ body {
     grid-template-columns: 1fr;
     gap: 2rem;
   }
+  .system-flow { flex-direction: column; }
+  .system-connector { transform: rotate(90deg); margin: 0.25rem 0; }
 }
 
 
@@ -852,16 +707,6 @@ body {
 /* ═══════════════════════════════════════════════════════════
    RESPONSIVE
 ════════════════════════════════════════════════════════════ */
-@media (max-width: 900px) {
-  .signal-grid { grid-template-columns: 1fr; }
-  .section__inner--split { grid-template-columns: 1fr; }
-  .system-flow { flex-direction: column; }
-  .system-connector { transform: rotate(90deg); margin: 0.25rem 0; }
-}
-
-@media (max-width: 600px) {
-  .hero__stat-cluster { flex-direction: column; }
-}
 
 
 /* ═══════════════════════════════════════════════════════════
@@ -870,7 +715,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   .scroll-cue__line { animation: none; }
-  .reveal-text, .signal-card, .system-node, .roster__table tbody tr {
+  .reveal-text, .system-node, .roster__table tbody tr {
     opacity: 1 !important;
     transform: none !important;
   }

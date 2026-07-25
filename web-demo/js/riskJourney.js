@@ -1,20 +1,32 @@
 /**
  * riskJourney.js — Scroll-Driven Risk Narrative
  * ===============================================
- * Renders the "Students don't disappear, they fade" interactive sequence:
- * student dots that animate in, wash into risk color, merge into two
- * clusters (healthy / at-risk), isolate the at-risk cluster, split it
- * into three behavioral profile blobs, then resolve those blobs into
- * clean solid circles — all as the user scrolls through one continuous
- * pinned section. Click interactivity on those resolved circles (detail
- * panel, student drill-down) comes in later phases.
+ * Renders the entire opening narrative of the page — this section is now
+ * the FIRST thing on the page. The hero, signal, distribution, and
+ * profiles sections that used to exist separately were removed; their
+ * content now lives here, as copy panels crossfading through this one
+ * section's animation sequence.
  *
- * Kept as a SEPARATE module from charts.js on purpose. charts.js owns the
- * Chart.js bar charts (distribution histogram, profile breakdown bars).
- * This module owns a hand-built SVG scene with its own animation timeline.
- * Mixing the two concerns in one file would make either one harder to
- * reason about — Chart.js manages its own canvas lifecycle and does not
- * compose cleanly with a raw SVG scene driven by GSAP scrub animation.
+ * Two-phase behavior:
+ *   1. LOAD-TRIGGERED ENTRANCE (animateEntranceOnLoad) — plays the
+ *      instant the page loads, no scroll required: intro copy settles
+ *      in, the student count animates up from 0, dots grow in from
+ *      radius 0, and a "scroll to explore" cue fades in once everything
+ *      has settled. Not scroll-position-driven at all — there's nothing
+ *      above this section to scroll up from anymore, so the old
+ *      "reveal as it scrolls into view" trigger has nothing to key off.
+ *   2. PINNED SCROLL SEQUENCE (animateMainSequence) — engages the moment
+ *      the user starts scrolling (mainStart: "top top"), locking the
+ *      section on screen through five labeled segments (colorwash,
+ *      merge, isolate, profiles, resolve) before releasing to reveal the
+ *      Roster and System sections below.
+ *
+ * Kept as a SEPARATE module from app.js on purpose. app.js owns page TEXT
+ * content — including populating what these copy panels actually say
+ * (student counts, signal features, thresholds, demographics) — while
+ * this module owns the SVG scene and WHEN each panel becomes visible.
+ * Content and timing are different concerns with different failure
+ * modes; mixing them would make either harder to reason about.
  *
  * CURRENT SCOPE:
  *   - Fetch predictions.json (independently of app.js's fetch — see note
@@ -23,18 +35,21 @@
  *     each pre-assigned a fixed jitter angle/fraction reused across every
  *     later clustering stage, and a profileLabel sourced directly from
  *     profiler.py's real K-Means output (renderDotGrid)
- *   - Dots grow in with a scroll-scrubbed staggered entrance as the
- *     section scrolls into view (animateDotEntrance) — NOT pinned, the
- *     page scrolls normally during this stage
+ *   - Entrance (animateEntranceOnLoad): intro panel copy + student count
+ *     + dots all animate in together on load, ending with the scroll cue
  *   - ONE continuous PINNED sequence (animateMainSequence) covers five
  *     labeled segments sharing a single GSAP timeline + ScrollTrigger,
  *     so they can never drift out of sync and never flicker between
  *     separate pin/unpin transitions:
  *       "colorwash" — dot fill washes grey → risk-tier color; left copy
- *                     crossfades intro panel → threshold legend panel
+ *                     crossfades intro panel → signal panel (top 3
+ *                     predictive features)
  *       "merge"     — goo filter turns on; dots animate into two organic
  *                     blobs (healthy / at-risk), area-proportional to
- *                     each cluster's actual student count
+ *                     each cluster's actual student count; left copy
+ *                     crossfades signal panel → threshold legend panel
+ *                     (moved here specifically to align with the moment
+ *                     the two clusters actually form)
  *       "isolate"   — healthy blob fades out; at-risk blob turns solid
  *                     red AND re-centers (was off-center to make room
  *                     for the healthy blob, now it's the only subject);
@@ -44,7 +59,10 @@
  *                     profile's established color and sized by its real
  *                     membership count; count+name labels fade in above
  *                     each, positioned with enough clearance to never
- *                     overlap the blob (PROFILE_LABEL_CLEARANCE)
+ *                     overlap the blob (PROFILE_LABEL_CLEARANCE); left
+ *                     copy crossfades to a demographics panel (per-
+ *                     profile descriptions sourced from real student
+ *                     records — see app.js:populateDemographicsPanel)
  *       "resolve"   — goo filter turns off; the many small per-profile
  *                     dots fade out as three solid, clean circles fade
  *                     in at the same centroid + radius — consolidation,
@@ -62,11 +80,12 @@
  *   - Colors read live from CSS custom properties rather than duplicating
  *     hex values in JS — main.css stays the single source of truth for
  *     the palette, the same principle already applied to dataset numbers
- *   - Graceful degradation: if GSAP/ScrollTrigger are unavailable, or the
- *     user has requested reduced motion, dots render directly in their
- *     final state (full size, correctly colored via the CSS attribute
- *     selectors from Phase 2) — no motion is required for the page to be
- *     correct
+ *   - Graceful degradation: entrance only needs GSAP core and runs
+ *     regardless of ScrollTrigger's availability; if GSAP itself is
+ *     unavailable, or the user has requested reduced motion, dots render
+ *     directly in their final state (full size, correctly colored via
+ *     the CSS attribute selectors from Phase 2) — no motion is required
+ *     for the page to be correct
  *
  * Not yet built:
  *   Phase 7 — click → detail panel (profile breakdown + strategy)
@@ -89,36 +108,41 @@ const DOT_RADIUS = 6;
 const DOT_SPACING = 18;            // center-to-center distance
 const GRID_MARGIN = 20;            // padding inside the SVG viewBox
 
-// Scroll zones for the animation sequence, expressed as ScrollTrigger
-// "start"/"end" strings. Defined as named constants, not inline magic
-// strings, so the relationship between zones is visible in one place.
+// Scroll zone for the pinned main sequence, expressed as ScrollTrigger
+// "start"/"end" strings. Defined as a named constant, not an inline
+// magic string, so it's visible in one place.
 //
-// entranceStart → entranceEnd: Stage 1 (dot grow-in), scrub, NOT pinned —
-// the page scrolls normally while dots grow in.
+// Entrance (dots growing in, copy fading in) is NO LONGER scroll-tied —
+// see animateEntranceOnLoad. It plays automatically the instant the page
+// loads, like the site's original hero section used to. This changed
+// because Risk Journey is now the FIRST section on the page (the hero,
+// signal, distribution, and profiles sections were removed and folded
+// into this one) — the old entrance trigger relied on scrolling the
+// section up from below the viewport, which no longer happens, since
+// there's nothing above it to scroll past anymore.
 //
-// mainStart → mainEnd: ONE continuous PINNED zone covering three
-// sequential segments — color wash + copy crossfade, then merge into two
-// clusters, then isolate the at-risk cluster (fade out healthy, copy
-// crossfades again). All three live inside ONE gsap.timeline() with
-// internal labels (see animateMainSequence), not three separate
+// mainStart → mainEnd: ONE continuous PINNED zone covering five
+// sequential segments — color wash + copy crossfade, merge into two
+// clusters, isolate the at-risk cluster, split into three profiles, then
+// resolve into clean circles. All five live inside ONE gsap.timeline()
+// with internal labels (see animateMainSequence), not five separate
 // ScrollTriggers — a separate trigger per segment would mean pinning,
 // unpinning, and re-pinning between each one, which reads as a jarring
-// flicker. One continuous pin across all three keeps the whole sequence
+// flicker. One continuous pin across all five keeps the whole sequence
 // feeling like a single unbroken moment.
 //
-// mainEnd uses "+=N" (a fixed pixel distance from mainStart) rather than
-// another "top/bottom %" string. With four sequential segments packed
-// into one pinned range, a fixed distance is far more predictable to
-// reason about and tune than tracking how "top X%" and "bottom Y%"
-// interact — that math only gets harder to reason about as more content
-// gets packed into the same pinned window. If any individual segment
-// feels rushed or sluggish once testing, this is the number to adjust —
-// use the commented `markers: true` line in animateMainSequence to see
-// exactly how much scroll distance is actually available.
+// mainStart is "top top" — pinning engages from the very first pixel of
+// scroll, since the section is already at the top of the page on load
+// (nothing above it to scroll past first). mainEnd uses "+=N" (a fixed
+// pixel distance from mainStart) rather than a "top/bottom %" string —
+// with five sequential segments packed into one pinned range, a fixed
+// distance is far more predictable to reason about and tune than
+// tracking how "top X%" and "bottom Y%" interact. If any individual
+// segment feels rushed or sluggish once testing, this is the number to
+// adjust — use the commented `markers: true` line in animateMainSequence
+// to see exactly how much scroll distance is actually available.
 const SCROLL_ZONES = {
-  entranceStart: "top 85%",
-  entranceEnd: "top 0%",
-  mainStart: "top 5%",
+  mainStart: "top top",
   mainEnd: "+=4200",
 };
 
@@ -616,68 +640,127 @@ function _createResolvedCircles(svg, centroids, profileBreakdown, k, colorMap) {
 }
 
 /**
- * Stage 1 — entrance. Dots grow from radius 0 to full size as the user
- * scrolls through this stage's dedicated range.
+ * Entrance — plays automatically the instant the page loads, mirroring
+ * the structure of the site's original hero entrance timeline (which no
+ * longer exists as a separate section, but the same polished feel is
+ * worth preserving): the intro panel's label, heading, and body settle
+ * in with a slight stagger, the student count animates up from 0, dots
+ * grow in from radius 0, and finally a "scroll to explore" cue fades in
+ * once everything has settled.
  *
- * This is scrub-tied, NOT a time-based once-trigger. An earlier version
- * used `duration + stagger + once: true`, fired at a single scroll
- * position — but that animation plays out over real wall-clock time
- * (~1.4s), while the user's scroll position keeps moving regardless of
- * whether that time has elapsed. At any normal scroll speed, the user
- * could cross into Stage 2's trigger zone before Stage 1 finished
- * growing the dots in, so the color wash would start advancing on dots
- * that hadn't even fully appeared yet.
+ * This is NOT tied to ScrollTrigger at all — no scroll position
+ * dependency, unlike every other animation in this file. That's a
+ * deliberate consequence of Risk Journey being the first section on the
+ * page now: there's no "below the viewport" for it to scroll up from,
+ * so a scroll-position trigger has nothing meaningful to key off here.
+ * Plays once, on load, like the hero always did.
  *
- * Tying entrance to scrub instead removes the race entirely: progress is
- * now purely a function of scroll position, not time, so by the moment
- * the user reaches END_ENTRANCE the dots are GUARANTEED fully grown,
- * regardless of how fast or slow they scrolled to get there.
+ * The student count element (#risk-journey-student-count) is OWNED by
+ * this function, not app.js's populateNarrativeCopy — app.js still
+ * fetches and would otherwise write the same element, which risked a
+ * race (whichever fetch resolved second would stomp the other's write,
+ * or worse, restart the animated count-up after it had already settled).
+ * Giving this element exactly one writer removes that race structurally.
  *
- * @param {SVGElement[]} circles - The <circle> elements to animate
+ * @param {SVGElement[]} circles - The <circle> elements to grow in
+ * @param {object} data - Full predictions.json payload (for student count)
  */
-function animateDotEntrance(circles) {
-  gsap.set(circles, { attr: { r: 0 } });
+function animateEntranceOnLoad(circles, data) {
+  const introPanel = document.getElementById("risk-journey-intro");
+  const scrollCue = document.getElementById("risk-journey-scroll-cue");
+  const countEl = document.getElementById("risk-journey-student-count");
 
-  gsap.to(circles, {
-    attr: { r: DOT_RADIUS },
-    ease: "power2.out",
-    stagger: { amount: 0.5, from: "random" },
-    scrollTrigger: {
-      trigger: "#risk-journey",
-      start: SCROLL_ZONES.entranceStart,
-      end: SCROLL_ZONES.entranceEnd,
-      scrub: 1,
-      // markers: true, // uncomment to visualize actual trigger points in-browser
+  const label = introPanel ? introPanel.querySelector(".section__label") : null;
+  const heading = introPanel ? introPanel.querySelector(".section__heading") : null;
+  const body = introPanel ? introPanel.querySelector(".section__body") : null;
+
+  gsap.set(circles, { attr: { r: 0 } });
+  if (label) gsap.set(label, { opacity: 0, y: 10 });
+  if (heading) gsap.set(heading, { opacity: 0, y: 16 });
+  if (body) gsap.set(body, { opacity: 0, y: 16 });
+  if (scrollCue) gsap.set(scrollCue, { opacity: 0 });
+
+  const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+  if (label) tl.to(label, { opacity: 1, y: 0, duration: 0.6 });
+  if (heading) tl.to(heading, { opacity: 1, y: 0, duration: 0.7 }, "-=0.35");
+  if (body) tl.to(body, { opacity: 1, y: 0, duration: 0.6 }, "-=0.45");
+
+  if (countEl) {
+    const counter = { val: 0 };
+    const target = data.summary.total_students;
+    tl.to(
+      counter,
+      {
+        val: target,
+        duration: 1.1,
+        ease: "power2.out",
+        onUpdate() {
+          countEl.textContent = Math.round(counter.val).toLocaleString();
+        },
+      },
+      "-=0.5"
+    );
+  }
+
+  tl.to(
+    circles,
+    {
+      attr: { r: DOT_RADIUS },
+      duration: 0.9,
+      ease: "power2.out",
+      stagger: { amount: 1.0, from: "random" },
     },
-  });
+    "-=0.4"
+  );
+
+  if (scrollCue) {
+    tl.to(scrollCue, { opacity: 1, duration: 0.5 }, "-=0.1");
+  }
 }
 
 /**
- * Stage 2 — ONE continuous pinned timeline covering four sequential
- * segments: color wash + copy crossfade, merge into two clusters,
- * isolate the at-risk cluster (turning it solid red), then split that
- * red mass into three profile blobs. All four share a single
- * gsap.timeline() and a single ScrollTrigger, using GSAP labels
- * ("colorwash", "merge", "isolate", "profiles") to sequence them — not
- * four separate ScrollTriggers, which would mean pinning/unpinning/
- * re-pinning between each segment and reading as a jarring flicker
- * rather than one continuous moment.
+ * Main pinned sequence — ONE continuous pinned timeline covering five
+ * sequential segments: color wash + copy crossfade, merge into two
+ * clusters, isolate the at-risk cluster (turning it solid red), split
+ * that red mass into three profile blobs, then resolve those blobs into
+ * clean circles. All five share a single gsap.timeline() and a single
+ * ScrollTrigger, using GSAP labels ("colorwash", "merge", "isolate",
+ * "profiles", "resolve") to sequence them — not five separate
+ * ScrollTriggers, which would mean pinning/unpinning/re-pinning between
+ * each segment and reading as a jarring flicker rather than one
+ * continuous moment.
  *
  * PINNED: this stage locks #risk-journey in place on screen for its
- * entire scroll range (SCROLL_ZONES.mainStart → mainEnd). Nothing on
- * screen moves — no scrolling of the section, no unintended
- * repositioning — the ONLY thing scroll input does during this stage is
- * advance whichever segment is currently active. The section releases
- * and normal scrolling resumes automatically once mainEnd is reached.
+ * entire scroll range (SCROLL_ZONES.mainStart → mainEnd), engaging from
+ * the very first pixel scrolled (mainStart is "top top" — the section is
+ * already at the top of the page on load, so there's no dead zone before
+ * pinning kicks in). Nothing on screen moves — no scrolling of the
+ * section, no unintended repositioning — the ONLY thing scroll input
+ * does during this stage is advance whichever segment is currently
+ * active. The section releases and normal scrolling resumes
+ * automatically once mainEnd is reached, revealing the Roster and System
+ * sections below.
+ *
+ * Five copy panels crossfade through this sequence — one per segment
+ * except "resolve", which needs no new copy:
+ *   intro (Step 1, shown during entrance) → colorwash → signal (Step 2)
+ *   → merge → thresholds (Step 3) → isolate → profiling (Step 4)
+ *   → profiles → demographics (Step 5) → resolve (no crossfade)
  *
  * Segment breakdown:
  *   "colorwash" — dot fill washes from grey to risk-tier color; left
- *                 copy crossfades from the intro panel to the threshold
- *                 legend panel.
+ *                 copy crossfades from the intro panel to the signal
+ *                 panel (the model's top 3 predictive features).
  *   "merge"     — the goo filter turns on; every dot animates from its
  *                 grid position to a jittered position within one of two
  *                 cluster centroids (healthy or at-risk), blending into
- *                 two organic blobs.
+ *                 two organic blobs. Left copy crossfades from the
+ *                 signal panel to the threshold legend panel — moved
+ *                 here (rather than colorwash, where it lived
+ *                 previously) specifically to align with the moment the
+ *                 two clusters actually form, since threshold values are
+ *                 what determine that grouping.
  *   "isolate"   — the healthy blob fades out entirely. AT THE SAME TIME,
  *                 the at-risk blob turns uniformly red (previously a
  *                 HIGH/MEDIUM mix of red/yellow from the colorwash
@@ -692,10 +775,13 @@ function animateDotEntrance(circles) {
  *                 behavioral profile (Time-Constrained, Disengaged
  *                 Learner, Quiet Decliner), each colored with that
  *                 profile's own established color (matching the roster
- *                 badges and profile breakdown chart elsewhere on the
- *                 page) and sized proportional to its real membership
- *                 count from profiler.py. A count+name label fades in
- *                 above each.
+ *                 badges elsewhere on the page) and sized proportional
+ *                 to its real membership count from profiler.py. A
+ *                 count+name label fades in above each. Left copy
+ *                 crossfades from the profiling-framing panel to the
+ *                 demographics panel (per-profile descriptions, sourced
+ *                 from real student records — see
+ *                 app.js:populateDemographicsPanel).
  *   "resolve"   — the goo filter turns off, and the many small dots that
  *                 made up each blob fade out as three solid, clean
  *                 circles fade in at the exact same centroid + radius —
@@ -729,9 +815,12 @@ function animateMainSequence(dotsGroup, circles, data) {
 
   gsap.set(circles, { fill: greyColor });
 
+  const scrollCue = document.getElementById("risk-journey-scroll-cue");
   const introPanel = document.getElementById("risk-journey-intro");
+  const signalPanel = document.getElementById("risk-journey-signal");
   const thresholdPanel = document.getElementById("risk-journey-thresholds");
   const profilingPanel = document.getElementById("risk-journey-profiling");
+  const demographicsPanel = document.getElementById("risk-journey-demographics");
 
   const healthyCircles = Array.from(circles).filter(
     (c) => c.dataset.riskLabel === "LOW"
@@ -799,6 +888,14 @@ function animateMainSequence(dotsGroup, circles, data) {
     },
   });
 
+  // The "scroll to explore" cue has done its job the instant the user
+  // starts scrolling (which is also the instant this pin engages, since
+  // mainStart is "top top") — fade it out immediately so it doesn't sit
+  // awkwardly on screen through the rest of the sequence.
+  if (scrollCue) {
+    tl.to(scrollCue, { opacity: 0, duration: 0.3 }, 0);
+  }
+
   // --- Segment: colorwash ---
   tl.addLabel("colorwash");
   tl.to(
@@ -809,15 +906,21 @@ function animateMainSequence(dotsGroup, circles, data) {
     },
     "colorwash"
   );
-  if (introPanel && thresholdPanel) {
+  if (introPanel && signalPanel) {
     tl.to(introPanel, { opacity: 0, duration: 0.4 }, "colorwash");
-    tl.to(thresholdPanel, { opacity: 1, duration: 0.4 }, "colorwash");
+    tl.to(signalPanel, { opacity: 1, duration: 0.4 }, "colorwash");
   }
 
   // --- Segment: merge ---
   // A small "+=0.3" gap after colorwash so the two segments don't feel
   // like they're firing simultaneously — same dwell-gap principle used
-  // between Stage 1 (entrance) and Stage 2 earlier.
+  // between the load-triggered entrance and this pinned sequence.
+  //
+  // The threshold/legend copy crossfades in HERE, not during colorwash —
+  // moved forward specifically to align with the moment the two clusters
+  // actually form, since threshold values are what determine that
+  // grouping (a student's score vs. 0.60 is literally why they end up in
+  // one cluster or the other).
   tl.addLabel("merge", "+=0.3");
   tl.call(() => setGooFilterActive(dotsGroup, true), null, "merge");
   tl.to(
@@ -832,6 +935,10 @@ function animateMainSequence(dotsGroup, circles, data) {
     },
     "merge"
   );
+  if (signalPanel && thresholdPanel) {
+    tl.to(signalPanel, { opacity: 0, duration: 0.4 }, "merge");
+    tl.to(thresholdPanel, { opacity: 1, duration: 0.4 }, "merge");
+  }
 
   // --- Segment: isolate ---
   // Three things happen together, all part of the same narrative beat
@@ -901,6 +1008,10 @@ function animateMainSequence(dotsGroup, circles, data) {
     },
     "profiles+=0.6"
   );
+  if (profilingPanel && demographicsPanel) {
+    tl.to(profilingPanel, { opacity: 0, duration: 0.4 }, "profiles");
+    tl.to(demographicsPanel, { opacity: 1, duration: 0.4 }, "profiles");
+  }
 
   // --- Segment: resolve ---
   // Blobs become clean circles. The goo filter turns off (no longer
@@ -932,29 +1043,43 @@ function animateMainSequence(dotsGroup, circles, data) {
 }
 
 /**
- * Sets up both animation stages for the dot grid, or skips straight to
- * the final CSS-driven state if GSAP/ScrollTrigger aren't available or
- * the user prefers reduced motion.
+ * Sets up the entrance and main pinned sequence, or skips straight to
+ * the final CSS-driven state if GSAP is unavailable entirely, or the
+ * user prefers reduced motion.
+ *
+ * Entrance and the main sequence have DIFFERENT dependencies: entrance
+ * (animateEntranceOnLoad) only needs GSAP core — no ScrollTrigger, since
+ * it's a pure load-triggered timeline now, not scroll-position-driven.
+ * The main sequence (animateMainSequence) needs ScrollTrigger for its
+ * pin/scrub behavior. If ScrollTrigger specifically is unavailable but
+ * GSAP core is present, entrance still runs — a graceful partial
+ * degradation rather than an all-or-nothing check.
  *
  * @param {SVGElement} svg - The SVG element returned by renderDotGrid()
  * @param {SVGGElement} dotsGroup - The <g> wrapping all dot circles
  * @param {object} data - Full predictions.json payload
  */
 function initDotAnimations(svg, dotsGroup, data) {
-  if (typeof gsap === "undefined" || typeof ScrollTrigger === "undefined") {
-    console.warn("[riskJourney] GSAP/ScrollTrigger unavailable — dots render statically.");
+  if (typeof gsap === "undefined") {
+    console.warn("[riskJourney] GSAP unavailable — dots render statically.");
     return;
   }
   if (_prefersReducedMotion()) {
     return;
   }
 
-  gsap.registerPlugin(ScrollTrigger);
-
   const circles = svg.querySelectorAll(".risk-journey__dot");
   if (circles.length === 0) return;
 
-  animateDotEntrance(circles);
+  // Entrance runs regardless of ScrollTrigger's availability — it never
+  // needed it in the first place.
+  animateEntranceOnLoad(circles, data);
+
+  if (typeof ScrollTrigger === "undefined") {
+    console.warn("[riskJourney] ScrollTrigger unavailable — pinned sequence skipped, entrance-only.");
+    return;
+  }
+  gsap.registerPlugin(ScrollTrigger);
   animateMainSequence(dotsGroup, circles, data);
 }
 
@@ -975,7 +1100,7 @@ async function bootRiskJourney() {
     const { svg, dotsGroup } = renderDotGrid(container, data.students);
     initDotAnimations(svg, dotsGroup, data);
     console.log(
-      `[riskJourney] Rendered ${data.students.length} dots with entrance, color-wash, merge, and isolate animation.`
+      `[riskJourney] Rendered ${data.students.length} dots — load entrance, then pinned colorwash/merge/isolate/profiles/resolve sequence.`
     );
   } catch (err) {
     console.error("[riskJourney]", err.message);

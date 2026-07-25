@@ -1,14 +1,19 @@
 /**
- * app.js — GSAP Scroll Narrative Orchestrator
+ * app.js — Page Copy & Roster Orchestrator
  * ============================================
- * Consumes predictions.json and drives all scroll-triggered animations.
+ * Consumes predictions.json and populates all TEXT content across the
+ * page — including the Risk Journey section's copy panels — plus the
+ * roster table.
  *
  * Data flow:
  *   fetch("assets/predictions.json")
- *     → populate hero stats (counter animation)
+ *     → populate Risk Journey copy panels (student counts, thresholds,
+ *       signal features, demographics — populateNarrativeCopy /
+ *       populateSignalPanel / populateDemographicsPanel)
  *     → populate roster table (staggered row reveal)
- *     → pass risk distribution data to charts.js
- *     → GSAP ScrollTrigger wires each section's entrance animation
+ *     → GSAP ScrollTrigger wires the Roster and System sections' reveal
+ *       (Risk Journey's own entrance + pinned sequence live in
+ *       riskJourney.js, not here — see that file for why)
  *
  * This module has one external dependency: predictions.json.
  * It knows nothing about Python, sklearn, or how scores were computed.
@@ -34,15 +39,17 @@ const SIGNAL_LABEL_MAP = {
 
 /**
  * Content for every possible feature the model can rank as top-3.
- * populateSignalCards() sorts feature_importances descending and builds
- * cards ONLY for whichever 3 keys come out on top for the current trained
- * model — this map has to cover all 9 possible features (not just 3)
- * since a retrain on a different dataset can shift which ones matter most.
+ * populateSignalPanel() sorts feature_importances descending and builds
+ * list items ONLY for whichever 3 keys come out on top for the current
+ * trained model — this map has to cover all 9 possible features (not
+ * just 3) since a retrain on a different dataset can shift which ones
+ * matter most.
  *
- * Each icon is a hand-drawn SVG string in the same visual language as the
- * rest of the page: 48x48 viewBox, currentColor stroke, stroke-width 2,
- * rounded caps/joins — kept minimal and geometric rather than a symbol
- * library, matching the existing hero/system-node icon style.
+ * The `icon` field is currently UNUSED — the Signal section moved from
+ * a card layout (which had room for icons) to a compact list inside the
+ * Risk Journey copy-stack (narrow column, no room for icons alongside
+ * title/weight/body for three features at once). Left in place rather
+ * than deleted, in case a future layout has room for them again.
  */
 const SIGNAL_CONTENT_MAP = {
   days_since_last_login: {
@@ -139,43 +146,6 @@ async function loadPredictions() {
     throw new Error("predictions.json is missing required fields: students, summary.");
   }
   return data;
-}
-
-// ---------------------------------------------------------------------------
-// Hero stats — animated counters
-// ---------------------------------------------------------------------------
-
-/**
- * Animates a numeric counter from 0 to targetValue using GSAP.
- * @param {HTMLElement} el  - The element to update
- * @param {number} target   - The final value
- * @param {number} decimals - Decimal places (default 0)
- */
-function animateCounter(el, target, decimals = 0) {
-  const obj = { val: 0 };
-  gsap.to(obj, {
-    val: target,
-    duration: 1.8,
-    ease: "power3.out",
-    onUpdate() {
-      el.textContent = decimals > 0
-        ? obj.val.toFixed(decimals)
-        : Math.round(obj.val).toLocaleString();
-    },
-  });
-}
-
-function populateHeroStats(summary) {
-  const statTotal = document.getElementById("stat-total");
-  const statRisk  = document.getElementById("stat-risk");
-
-  document.querySelectorAll(".stat-card").forEach((card) => {
-    card.classList.remove("stat-card--loading");
-    card.classList.add("stat-card--loaded");
-  });
-
-  animateCounter(statTotal.querySelector(".stat-card__value"), summary.total_students);
-  animateCounter(statRisk.querySelector(".stat-card__value"),  summary.at_risk_count);
 }
 
 // ---------------------------------------------------------------------------
@@ -354,23 +324,13 @@ function hideTooltip() {
 function initScrollAnimations() {
   gsap.registerPlugin(ScrollTrigger);
 
-  // --- Hero entrance ---
-  const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-
-  tl.to(".hero__eyebrow", { opacity: 1, y: 0, duration: 0.7 })
-    .from(".hero__headline-line", {
-      yPercent: 110,
-      stagger: 0.12,
-      duration: 0.9,
-      ease: "power4.out",
-    }, "-=0.3")
-    .to(".hero__subhead", { opacity: 1, y: 0, duration: 0.7 }, "-=0.4")
-    .to(".hero__scroll-cue", { opacity: 1, duration: 0.5 }, "-=0.1");
-
-  // Hero stat cards stagger in after data loads (triggered via JS after fetch)
-  gsap.set(".stat-card", { opacity: 0, y: 20 });
-
   // --- Section headings (scroll-triggered) ---
+  // Still used by the Roster and System sections, which are untouched.
+  // The Risk Journey section's own headings are NOT in this list — its
+  // entrance is a load-triggered timeline owned by riskJourney.js
+  // (animateEntranceOnLoad), and its later panels crossfade via that
+  // same file's pinned main sequence, neither of which needs this
+  // generic scroll-into-view reveal.
   document.querySelectorAll(".reveal-text").forEach((el) => {
     gsap.to(el, {
       scrollTrigger: { trigger: el, start: "top 80%", once: true },
@@ -380,12 +340,6 @@ function initScrollAnimations() {
       ease: "power3.out",
     });
   });
-
-  // NOTE: Signal card stagger + weight bars are NOT set up here. Those
-  // cards don't exist in the DOM yet at this point in the boot sequence —
-  // #signal-grid is an empty container until populateSignalCards() builds
-  // it from live feature_importances data. See initSignalCardReveal(),
-  // called separately from boot() right after the cards are constructed.
 
   // --- System nodes stagger ---
   gsap.to(".system-node", {
@@ -399,51 +353,6 @@ function initScrollAnimations() {
     stagger: 0.15,
     duration: 0.7,
     ease: "power3.out",
-  });
-}
-
-/**
- * Sets up the scroll-triggered stagger reveal for the Signal section's
- * cards, plus the weight-bar fill animation that follows it.
- *
- * Split out from initScrollAnimations() because — unlike every other
- * scroll-triggered element on the page, which exists in static HTML from
- * first paint — the .signal-card elements are constructed at runtime by
- * populateSignalCards() once feature_importances has been fetched. A
- * ScrollTrigger registered against ".signal-card" before those elements
- * exist would match an empty NodeList and silently do nothing. Calling
- * this function AFTER populateSignalCards() guarantees the elements are
- * already in the DOM when GSAP looks for them.
- */
-function initSignalCardReveal() {
-  gsap.to(".signal-card", {
-    scrollTrigger: {
-      trigger: ".signal-grid",
-      start: "top 75%",
-      once: true,
-    },
-    opacity: 1,
-    y: 0,
-    stagger: 0.12,
-    duration: 0.7,
-    ease: "power3.out",
-    onComplete: animateWeightBars,
-  });
-}
-
-/**
- * Animates the feature importance weight bars on the signal cards.
- * Width targets are set via data-weight attributes in the HTML.
- */
-function animateWeightBars() {
-  document.querySelectorAll(".signal-card__weight-fill").forEach((bar) => {
-    const weight = parseFloat(bar.dataset.weight || 0);
-    gsap.to(bar, {
-      width: `${weight * 100}%`,
-      duration: 1.0,
-      ease: "power3.out",
-      delay: 0.1,
-    });
   });
 }
 
@@ -463,19 +372,6 @@ function animateRosterRows() {
     x: 0,
     stagger: 0.04,
     duration: 0.5,
-    ease: "power3.out",
-  });
-}
-
-/**
- * Animates hero stat cards in after data is loaded.
- */
-function animateStatCards() {
-  gsap.to(".stat-card", {
-    opacity: 1,
-    y: 0,
-    stagger: 0.12,
-    duration: 0.7,
     ease: "power3.out",
   });
 }
@@ -530,27 +426,32 @@ function populateNarrativeCopy(data) {
   document.querySelectorAll(".value-high-cutoff").forEach((el) => {
     el.textContent = highCutoffFormatted;
   });
-
-  // Note: signal-card weight bars are NOT patched here. populateSignalCards()
-  // builds those cards from scratch with the correct data-weight value
-  // already baked in at creation time — see below.
 }
 
 /**
- * Builds the Signal section's 3 cards entirely from feature_importances,
- * rather than relying on hardcoded HTML. This exists because a retrain
- * on a different-sized dataset can change not just the WEIGHT PERCENTAGES
- * shown, but which 3 features are actually most predictive — a card
- * hardcoded as "Completion stall" is misleading if avg_completion_rate
- * has dropped out of the true top 3 for the current model. Rebuilding
- * the cards from a full content map (SIGNAL_CONTENT_MAP, covering all 9
- * possible features) keeps the claim "these are the three most influential
- * variables" honest regardless of dataset size or retrain.
+ * Builds the Risk Journey "signal" panel's content entirely from
+ * feature_importances, rather than relying on hardcoded HTML. This
+ * exists because a retrain on a different-sized dataset can change not
+ * just the WEIGHT PERCENTAGES shown, but which 3 features are actually
+ * most predictive — a hardcoded "Completion stall" entry is misleading
+ * if avg_completion_rate has dropped out of the true top 3 for the
+ * current model. Rebuilding from a full content map (SIGNAL_CONTENT_MAP,
+ * covering all 9 possible features) keeps the claim "these are the three
+ * most influential variables" honest regardless of dataset size or retrain.
+ *
+ * Compact list format, not cards — the copy-stack column is narrow
+ * (44ch max-width) and needs to show all three features' full info
+ * (title, body, weight) simultaneously in one panel, unlike the old
+ * Signal section which had a full-width row to spread 3 cards across.
+ *
+ * This panel's VISIBILITY (when it fades in/out) is controlled entirely
+ * by riskJourney.js's shared pinned timeline — this function only ever
+ * builds its CONTENT, once, when data first loads.
  *
  * @param {object} data - Full predictions.json payload
  */
-function populateSignalCards(data) {
-  const container = document.getElementById("signal-grid");
+function populateSignalPanel(data) {
+  const container = document.getElementById("signal-list");
   if (!container || !data.feature_importances) return;
 
   // Rank all features by importance, descending, and take the top 3.
@@ -566,28 +467,89 @@ function populateSignalCards(data) {
     if (!content) {
       // Defensive fallback: a feature the model ranked highly but that
       // isn't in the content map yet (e.g. a brand-new engineered feature
-      // added to features.py without a matching card written here).
+      // added to features.py without a matching entry written here).
       console.warn(
-        `[Drop-off Saver] No SIGNAL_CONTENT_MAP entry for "${featureKey}" — skipping card.`
+        `[Drop-off Saver] No SIGNAL_CONTENT_MAP entry for "${featureKey}" — skipping.`
       );
       return;
     }
 
-    const card = document.createElement("div");
-    card.className = "signal-card";
-    card.dataset.signal = featureKey;
-    card.innerHTML = `
-      <div class="signal-card__icon">${content.icon}</div>
-      <h3 class="signal-card__title">${content.title}</h3>
-      <p class="signal-card__body">${content.body}</p>
-      <div class="signal-card__weight">
-        <span class="signal-card__weight-label">Model weight</span>
-        <div class="signal-card__weight-bar">
-          <div class="signal-card__weight-fill" data-feature-key="${featureKey}" data-weight="${importance.toFixed(2)}" style="width: 0%"></div>
-        </div>
+    const item = document.createElement("div");
+    item.className = "signal-list-item";
+    item.dataset.signal = featureKey;
+    // Weight bar width is set directly here, not animated — by the time
+    // this panel's opacity crossfades to visible (during the "colorwash"
+    // segment, much later), the bar is already at its correct width, so
+    // there's no separate "fill" moment for the viewer to see anyway.
+    item.innerHTML = `
+      <div class="signal-list-item__header">
+        <span class="signal-list-item__title">${content.title}</span>
+        <span class="signal-list-item__weight">${Math.round(importance * 100)}%</span>
+      </div>
+      <p class="signal-list-item__body">${content.body}</p>
+      <div class="signal-list-item__bar">
+        <div class="signal-list-item__bar-fill" style="width: ${(importance * 100).toFixed(0)}%"></div>
       </div>
     `;
-    container.appendChild(card);
+    container.appendChild(item);
+  });
+}
+
+/**
+ * Builds the Risk Journey "demographics" panel's content by sourcing
+ * each profile's description directly from a real student record in
+ * predictions.json (student.risk_profile.description) — never a second,
+ * hand-typed copy of text that already lives in profiler.py's
+ * RISK_PROFILES dict. If that text ever changes in profiler.py, this
+ * panel picks up the new wording automatically on the next data refresh,
+ * with no matching manual edit required here.
+ *
+ * PROFILE_ORDER is a display-order choice (left-to-right narrative
+ * flow), not "data" — it's fine for this to be a fixed constant, unlike
+ * the description text itself.
+ *
+ * @param {object} data - Full predictions.json payload
+ */
+const PROFILE_ORDER = ["Time-Constrained", "Disengaged Learner", "Quiet Decliner"];
+const PROFILE_DOT_CLASS_MAP = {
+  "Time-Constrained": "profile-legend__dot--time-constrained",
+  "Disengaged Learner": "profile-legend__dot--disengaged",
+  "Quiet Decliner": "profile-legend__dot--quiet-decliner",
+};
+
+function populateDemographicsPanel(data) {
+  const container = document.getElementById("demographics-list");
+  if (!container) return;
+
+  // Find one sample student per profile label — every student sharing a
+  // label has identical description text (it's set once per cluster in
+  // profiler.py), so the first match found is sufficient.
+  const descriptionsByLabel = {};
+  for (const student of data.students) {
+    if (!student.risk_profile) continue;
+    const label = student.risk_profile.label;
+    if (!descriptionsByLabel[label]) {
+      descriptionsByLabel[label] = student.risk_profile.description;
+    }
+  }
+
+  container.innerHTML = "";
+
+  PROFILE_ORDER.forEach((label) => {
+    const description = descriptionsByLabel[label];
+    if (!description) return; // profile absent from current dataset — skip gracefully
+
+    const item = document.createElement("div");
+    item.className = "profile-legend__item";
+    const dotClass = PROFILE_DOT_CLASS_MAP[label] || "";
+    item.innerHTML = `
+      <span class="profile-legend__dot ${dotClass}"></span>
+      <div>
+        <strong>${label}</strong>
+        <p>${description}</p>
+      </div>
+    `;
+    container.appendChild(item);
   });
 }
 
@@ -619,34 +581,27 @@ async function boot() {
     const data = await loadPredictions();
 
     // Populate UI
-    populateHeroStats(data.summary);
-    animateStatCards();
-
     populateNarrativeCopy(data);
-
-    populateSignalCards(data);
-    initSignalCardReveal();
+    populateSignalPanel(data);
+    populateDemographicsPanel(data);
 
     populateRoster(data.students);
     animateRosterRows();
 
     populateFooter(data.generated_at);
 
-    // Pass data to chart module (charts.js exposes window.renderCharts)
-    if (typeof window.renderCharts === "function") {
-      window.renderCharts(data);
-    }
-
   } catch (err) {
     console.error("[Drop-off Saver]", err.message);
 
-    // Graceful degradation: show a visible error for the demo context
-    const heroContent = document.querySelector(".hero__content");
-    if (heroContent) {
+    // Graceful degradation: show a visible error for the demo context.
+    // Anchored to the Risk Journey intro panel now — the hero section
+    // (previously used as the error anchor) no longer exists.
+    const introPanel = document.getElementById("risk-journey-intro");
+    if (introPanel) {
       const errorEl = document.createElement("div");
       errorEl.style.cssText = "margin-top:2rem;padding:1rem 1.25rem;border:1px solid #e8453c;border-radius:6px;font-family:monospace;font-size:0.8rem;color:#e8453c;max-width:60ch;";
       errorEl.textContent = `⚠ ${err.message}`;
-      heroContent.appendChild(errorEl);
+      introPanel.appendChild(errorEl);
     }
   }
 }

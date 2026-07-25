@@ -51,3 +51,4 @@ The goal is to use visual elements/shapes to represent students and the data we 
   - Defining scroll zones for the dots grid entrance and coloring animations
   - Test-metaball HTML and JS files added as a separate module to test the dots animation before full integration.
   - Merge tested blob animation into the actual scroll motion to go from a dot grid into two circular shapes (safe and at-risk students).
+  - Clean up the UI to allow better storytelling, keeping the Risk-journey scroll-driven narrative and removing all the duplicated information in other sections.

@@ -11,69 +11,34 @@
 <body>
 
   <!-- ═══════════════════════════════════════════════════════════
-       SECTION 1: HERO — the thesis
-       Opens with the single most important number.
-       "Every week, students disappear. This is the signal."
-  ════════════════════════════════════════════════════════════ -->
-  <section class="section section--hero" id="hero">
-    <div class="hero__bg-grid" aria-hidden="true"></div>
+       SECTION 1: RISK JOURNEY — the entire opening narrative
+       This is now the FIRST thing on the page (hero, signal,
+       distribution, and profiles sections were removed — their content
+       lives here now, as copy panels crossfading through this single
+       pinned scroll sequence).
 
-    <div class="hero__content">
-      <p class="hero__eyebrow">Early Warning System</p>
+       Two-phase behavior, both owned by riskJourney.js:
+         1. LOAD-TRIGGERED ENTRANCE (animateEntranceOnLoad) — plays
+            automatically the instant the page loads, no scroll needed:
+            intro copy fades in, dots grow in, "scroll to explore" cue
+            appears. Nothing here is scroll-position-dependent, since
+            this section starts already at the top of the page — the old
+            "scroll it up from below the viewport" trigger doesn't apply
+            once there's no hero above it to reveal it from.
+         2. PINNED SCROLL SEQUENCE (animateMainSequence) — engages the
+            moment the user starts scrolling (start: "top top"), holding
+            the section fixed on screen through five labeled segments
+            (colorwash, merge, isolate, profiles, resolve) before
+            releasing to reveal the roster + system sections below.
 
-      <h1 class="hero__headline">
-        <span class="hero__headline-line" data-line="1">Students don't</span>
-        <span class="hero__headline-line hero__headline-line--accent" data-line="2">disappear.</span>
-        <span class="hero__headline-line" data-line="3">They fade.</span>
-      </h1>
-
-      <p class="hero__subhead">
-        The signal exists in the data — days since last login, completion
-        stalls, the silence before the drop. This system finds it two weeks
-        before withdrawal.
-      </p>
-
-      <div class="hero__stat-cluster" id="hero-stats">
-        <!-- Populated by app.js from predictions.json -->
-        <div class="stat-card stat-card--loading" id="stat-total">
-          <span class="stat-card__value" data-target="total">—</span>
-          <span class="stat-card__label">Students tracked</span>
-        </div>
-        <div class="stat-card stat-card--danger stat-card--loading" id="stat-risk">
-          <span class="stat-card__value" data-target="at_risk">—</span>
-          <span class="stat-card__label">At risk now</span>
-        </div>
-        <div class="stat-card stat-card--loading" id="stat-window">
-          <span class="stat-card__value">14d</span>
-          <span class="stat-card__label">Intervention window</span>
-        </div>
-      </div>
-
-      <div class="hero__scroll-cue" aria-hidden="true">
-        <span>Scroll to explore</span>
-        <div class="scroll-cue__line"></div>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- ═══════════════════════════════════════════════════════════
-       SECTION 1.5: RISK JOURNEY — scroll-driven dot narrative
-       This section will grow across further phases into the full
-       split/drill-down sequence. Placement (before vs. replacing hero's
-       stat cluster) is not yet finalized — revisit once the full
-       sequence is built.
-
-       Copy has THREE stacked panels sharing one grid cell (see CSS), not
+       Copy has FIVE stacked panels sharing one grid cell (see CSS), not
        one static block:
-         #risk-journey-intro       — resting state (grey dots appearing)
-         #risk-journey-thresholds  — crossfades in during the colorwash
-                                      segment of riskJourney.js's pinned
-                                      timeline
-         #risk-journey-profiling   — crossfades in during that same
-                                      timeline's isolate segment, once
-                                      the healthy cluster has faded out
-       All three crossfades are driven by ONE shared GSAP timeline in
+         #risk-journey-intro        — resting state, visible on load
+         #risk-journey-signal       — crossfades in during "colorwash"
+         #risk-journey-thresholds   — crossfades in during "merge"
+         #risk-journey-profiling    — crossfades in during "isolate"
+         #risk-journey-demographics — crossfades in during "profiles"
+       All crossfades are driven by ONE shared GSAP timeline in
        riskJourney.js (animateMainSequence), never independent triggers,
        so copy and visuals can't drift out of sync with each other.
   ════════════════════════════════════════════════════════════ -->
@@ -85,24 +50,43 @@
 
           <div class="risk-journey__copy-panel" id="risk-journey-intro">
             <div class="section__label" aria-hidden="true">Risk Journey — Step 1</div>
-            <h2 class="section__heading reveal-text">
-              Every student, one dot.
+            <h2 class="section__heading">
+              Students don't disappear. They fade.
             </h2>
             <p class="section__body">
               <span id="risk-journey-student-count">500</span> students
-              tracked this term. This is the whole population — one dot
-              per student, exactly as they appear in the dataset.
+              tracked this term — one dot per student. The signal exists
+              in the data: login gaps, completion stalls, the silence
+              before the drop. This system finds it two weeks before
+              withdrawal.
             </p>
           </div>
 
-          <div class="risk-journey__copy-panel" id="risk-journey-thresholds">
+          <div class="risk-journey__copy-panel" id="risk-journey-signal">
             <div class="section__label" aria-hidden="true">Risk Journey — Step 2</div>
+            <h2 class="section__heading">
+              Three patterns predict every dropout.
+            </h2>
+            <!-- Populated entirely by app.js:populateSignalPanel(), which
+                 reads feature_importances from predictions.json, ranks
+                 all 9 model features, and builds exactly the top 3 —
+                 whichever those turn out to be for the current trained
+                 model. No feature is hardcoded here; the content map
+                 living in app.js covers all 9 possible features so any
+                 combination can appear correctly. -->
+            <div class="signal-list" id="signal-list"></div>
+          </div>
+
+          <div class="risk-journey__copy-panel" id="risk-journey-thresholds">
+            <div class="section__label" aria-hidden="true">Risk Journey — Step 3</div>
             <h2 class="section__heading">
               Color reveals the risk.
             </h2>
             <p class="section__body">
-              Each dot is colored by the model's own risk score — the
-              same score used everywhere else on this page.
+              The model assigns each student a probability score from 0
+              to 1. Students above the
+              <strong><span class="value-risk-threshold">0.60</span> threshold</strong>
+              are flagged for intervention — prioritized by severity.
             </p>
             <div class="legend">
               <div class="legend__item">
@@ -121,7 +105,7 @@
           </div>
 
           <div class="risk-journey__copy-panel" id="risk-journey-profiling">
-            <div class="section__label" aria-hidden="true">Risk Journey — Step 3</div>
+            <div class="section__label" aria-hidden="true">Risk Journey — Step 4</div>
             <h2 class="section__heading">
               Now, a closer look at who's at risk.
             </h2>
@@ -132,6 +116,24 @@
             </p>
           </div>
 
+          <div class="risk-journey__copy-panel" id="risk-journey-demographics">
+            <div class="section__label" aria-hidden="true">Risk Journey — Step 5</div>
+            <h2 class="section__heading">
+              Not every at-risk student needs the same email.
+            </h2>
+            <p class="section__body">
+              At-risk students are clustered by behavioral and demographic
+              similarity into three profiles. Each one tells a different
+              story about <em>why</em> a student is disengaging.
+            </p>
+            <!-- Populated entirely by app.js:populateDemographicsPanel(),
+                 which sources each profile's description directly from a
+                 real student record in predictions.json (risk_profile
+                 .description) — never a second, hand-typed copy of text
+                 that already lives in profiler.py's RISK_PROFILES dict. -->
+            <div class="profile-legend" id="demographics-list"></div>
+          </div>
+
         </div>
 
         <div class="risk-journey__canvas" id="risk-journey-canvas">
@@ -139,133 +141,21 @@
         </div>
 
       </div>
+
+      <div class="risk-journey__scroll-cue" id="risk-journey-scroll-cue" aria-hidden="true">
+        <span>Scroll to explore</span>
+        <div class="scroll-cue__line"></div>
+      </div>
     </div>
   </section>
 
 
   <!-- ═══════════════════════════════════════════════════════════
-       SECTION 2: SIGNAL — how the model reads disengagement
-  ════════════════════════════════════════════════════════════ -->
-  <section class="section section--signal" id="signal">
-    <div class="section__inner">
-      <div class="section__label" aria-hidden="true">01 — The Signal</div>
-
-      <h2 class="section__heading reveal-text">
-        Three patterns predict every dropout.
-      </h2>
-
-      <!-- Populated entirely by app.js:populateSignalCards(), which reads
-           feature_importances from predictions.json, ranks all 9 model
-           features, and builds exactly the top 3 as cards — whichever
-           those turn out to be for the current trained model. No feature
-           is hardcoded here; the content map living in app.js covers all
-           9 possible features so any combination can appear correctly. -->
-      <div class="signal-grid" id="signal-grid"></div>
-
-    </div>
-  </section>
-
-
-  <!-- ═══════════════════════════════════════════════════════════
-       SECTION 3: DISTRIBUTION — risk score chart
-  ════════════════════════════════════════════════════════════ -->
-  <section class="section section--distribution" id="distribution">
-    <div class="section__inner section__inner--split">
-
-      <div class="section__copy">
-        <div class="section__label" aria-hidden="true">02 — Risk Distribution</div>
-        <h2 class="section__heading reveal-text">
-          Most students are safe.<br/>
-          A few need you now.
-        </h2>
-        <p class="section__body">
-          The model assigns each student a probability score from 0 to 1.
-          Students above the <strong><span class="value-risk-threshold">0.60</span> threshold</strong> are flagged for
-          intervention — prioritized by severity.
-        </p>
-        <div class="legend">
-          <div class="legend__item">
-            <span class="legend__dot legend__dot--high"></span>
-            <span>High risk  ≥ <span class="value-high-cutoff">0.75</span></span>
-          </div>
-          <div class="legend__item">
-            <span class="legend__dot legend__dot--medium"></span>
-            <span>Medium risk  ≥ <span class="value-risk-threshold">0.60</span></span>
-          </div>
-          <div class="legend__item">
-            <span class="legend__dot legend__dot--safe"></span>
-            <span>Safe  &lt; <span class="value-risk-threshold">0.60</span></span>
-          </div>
-        </div>
-      </div>
-
-      <div class="section__chart-wrap">
-        <canvas id="chart-distribution" role="img"
-          aria-label="Bar chart showing distribution of student risk scores"></canvas>
-      </div>
-
-    </div>
-  </section>
-
-
-  <!-- ═══════════════════════════════════════════════════════════
-       SECTION 3.5: PROFILES — risk profile breakdown
-       Bridges "how many are at risk" to "who needs the table below"
-  ════════════════════════════════════════════════════════════ -->
-  <section class="section section--profiles" id="profiles">
-    <div class="section__inner section__inner--split">
-
-      <div class="section__chart-wrap section__chart-wrap--profiles">
-        <canvas id="chart-profiles" role="img"
-          aria-label="Bar chart showing breakdown of at-risk students by behavioral profile"></canvas>
-      </div>
-
-      <div class="section__copy">
-        <div class="section__label" aria-hidden="true">02.5 — Risk Profiles</div>
-        <h2 class="section__heading reveal-text">
-          Not every at-risk student needs the same email.
-        </h2>
-        <p class="section__body">
-          At-risk students are clustered by behavioral and demographic
-          similarity into three profiles. Each one tells a different story
-          about <em>why</em> a student is disengaging — and points to a
-          different retention strategy.
-        </p>
-        <div class="profile-legend">
-          <div class="profile-legend__item">
-            <span class="profile-legend__dot profile-legend__dot--time-constrained"></span>
-            <div>
-              <strong>Time-Constrained</strong>
-              <p>Availability-driven drop-off. Often full-time workers or parents.</p>
-            </div>
-          </div>
-          <div class="profile-legend__item">
-            <span class="profile-legend__dot profile-legend__dot--disengaged"></span>
-            <div>
-              <strong>Disengaged Learner</strong>
-              <p>Passive viewing without active participation. Often younger, mobile-primary.</p>
-            </div>
-          </div>
-          <div class="profile-legend__item">
-            <span class="profile-legend__dot profile-legend__dot--quiet-decliner"></span>
-            <div>
-              <strong>Quiet Decliner</strong>
-              <p>Was engaged, recently dropped off. High investment, highly recoverable.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-
-  <!-- ═══════════════════════════════════════════════════════════
-       SECTION 4: ROSTER — the at-risk students table
+       SECTION 2: ROSTER — the at-risk students table
   ════════════════════════════════════════════════════════════ -->
   <section class="section section--roster" id="roster">
     <div class="section__inner">
-      <div class="section__label" aria-hidden="true">03 — Student Roster</div>
+      <div class="section__label" aria-hidden="true">02 — Student Roster</div>
       <h2 class="section__heading reveal-text">
         The students who need intervention.
       </h2>
@@ -314,11 +204,11 @@
 
 
   <!-- ═══════════════════════════════════════════════════════════
-       SECTION 5: SYSTEM — architecture explainer
+       SECTION 3: SYSTEM — architecture explainer
   ════════════════════════════════════════════════════════════ -->
   <section class="section section--system" id="system">
     <div class="section__inner">
-      <div class="section__label" aria-hidden="true">04 — System Design</div>
+      <div class="section__label" aria-hidden="true">03 — System Design</div>
       <h2 class="section__heading reveal-text">
         Three layers. One contract.
       </h2>
@@ -383,7 +273,7 @@
         Drop-off Saver — ML System Design Portfolio
       </p>
       <p class="footer__meta">
-        Random Forest · Scikit-Learn · GSAP · Chart.js ·
+        Random Forest · Scikit-Learn · GSAP ·
         <span id="footer-generated-at">—</span>
       </p>
     </div>
@@ -394,15 +284,16 @@
     <div class="tooltip__inner" id="tooltip-content"></div>
   </div>
 
-  <!-- Chart.js + GSAP loaded synchronously (no defer) at the end of body.
-       app.js and charts.js depend on both being fully evaluated before
-       they run — loading them here, in this order, guarantees that
-       without needing window.onload gating. -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js"></script>
+  <!-- GSAP loaded synchronously (no defer) at the end of body. app.js and
+       riskJourney.js depend on it being fully evaluated before they run —
+       loading it here, in this order, guarantees that without needing
+       window.onload gating. Chart.js is no longer used anywhere on the
+       page (the distribution/profile charts were removed in favor of the
+       Risk Journey narrative) — charts.js is correspondingly unreferenced
+       and can be deleted from web-demo/js/ if desired. -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
-  <script src="js/charts.js"></script>
   <script src="js/app.js"></script>
   <script src="js/riskJourney.js"></script>
 </body>
