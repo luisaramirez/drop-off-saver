@@ -290,6 +290,102 @@ body {
 
 
 /* ═══════════════════════════════════════════════════════════
+   RISK JOURNEY — Phase 7 detail panel (click-driven)
+   Shown/hidden entirely via riskJourney.js click handlers, not part of
+   the scroll-timed crossfade sequence — see attachProfileClickHandlers().
+════════════════════════════════════════════════════════════ */
+.risk-journey__back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-bottom: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.risk-journey__back-link:hover {
+  color: var(--c-amber);
+}
+
+.detail-risk-split {
+  display: flex;
+  gap: 2rem;
+  margin: 1.5rem 0;
+}
+
+.detail-risk-split__item {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-risk-split__count {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--c-text-primary);
+  line-height: 1;
+}
+
+.detail-risk-split__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 0.4rem;
+}
+
+.detail-strategy {
+  background: var(--c-bg-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.75rem;
+}
+
+.detail-strategy__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--c-amber);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.6rem;
+}
+
+.detail-strategy__text {
+  font-size: var(--text-sm);
+  color: var(--c-text-secondary);
+  line-height: 1.6;
+}
+
+.detail-cta {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--c-bg);
+  background: var(--c-amber);
+  border: none;
+  border-radius: 6px;
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.detail-cta:hover {
+  background: #ffb84d;
+  transform: translateY(-1px);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
    ROSTER TABLE
 ════════════════════════════════════════════════════════════ */
 .section--roster { background-color: var(--c-bg); }
@@ -487,6 +583,7 @@ body {
 #risk-journey-thresholds { opacity: 0; }
 #risk-journey-profiling { opacity: 0; }
 #risk-journey-demographics { opacity: 0; }
+#risk-journey-detail { opacity: 0; pointer-events: none; }
 
 .risk-journey__canvas {
   display: flex;
@@ -552,9 +649,24 @@ body {
    data (which profile, which color token). Transition on fill/stroke
    only — never on opacity, which stays GSAP-controlled during the fade-in
    (a CSS transition racing GSAP's own opacity tween would fight it, the
-   same lesson learned with .risk-journey__dot's fill in Phase 2/3). */
+   same lesson learned with .risk-journey__dot's fill in Phase 2/3).
+   Clickable as of Phase 7 — cursor + a subtle stroke on hover signal
+   that, without relying on opacity/scale changes that GSAP might also
+   be mid-animating during the fade-in. */
 .risk-journey__resolved-circle {
   stroke: none;
+  cursor: pointer;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+.risk-journey__resolved-circle:hover {
+  stroke: var(--c-text-primary);
+  stroke-width: 2px;
+}
+
+.risk-journey__resolved-circle--selected {
+  stroke: var(--c-text-primary);
+  stroke-width: 3px;
 }
 
 @media (max-width: 900px) {

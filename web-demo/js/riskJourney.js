@@ -199,6 +199,21 @@ const PROFILE_COLOR_VARS = {
 // cause of the name line nearly touching/overlapping the blob.
 const PROFILE_LABEL_CLEARANCE = 34;
 
+// Phase 7 click interaction: where the clicked ("selected") circle and
+// the two non-clicked ("other") circles move to, expressed as viewBox
+// fractions — same convention as every other centroid in this file, so
+// the layout stays correct regardless of dataset size. The selected
+// circle moves to upper-center and grows slightly (the visual "subject"
+// of the detail panel now showing on the left); the other two shrink
+// and move to the bottom, still visible but clearly de-emphasized.
+const FOCUSED_SELECTED_FRAC = { x: 0.5, y: 0.32 };
+const FOCUSED_SELECTED_SCALE = 1.15;
+const FOCUSED_OTHER_FRACS = [
+  { x: 0.3, y: 0.82 },
+  { x: 0.7, y: 0.82 },
+];
+const FOCUSED_OTHER_SCALE = 0.55;
+
 // ---------------------------------------------------------------------------
 // Data ingestion
 // ---------------------------------------------------------------------------
@@ -876,6 +891,16 @@ function animateMainSequence(dotsGroup, circles, data) {
   const profileLabels = _createProfileLabels(svg, profileCentroids, profileBreakdown, CLUSTER_TIGHTNESS_K);
   const resolvedCircles = _createResolvedCircles(svg, profileCentroids, profileBreakdown, CLUSTER_TIGHTNESS_K, profileColorMap);
 
+  // Convert the profileLabels array into a label-keyed lookup — the
+  // array itself (in _createProfileLabels) is built by iterating
+  // PROFILE_CENTROID_FRACS' keys in order, so indices line up exactly.
+  // The click handler needs to look up "the label element for Quiet
+  // Decliner specifically", not just "all label elements in a row".
+  const profileLabelElements = {};
+  Object.keys(PROFILE_CENTROID_FRACS).forEach((label, i) => {
+    profileLabelElements[label] = profileLabels[i];
+  });
+
   const tl = gsap.timeline({
     scrollTrigger: {
       trigger: "#risk-journey",
@@ -1040,6 +1065,198 @@ function animateMainSequence(dotsGroup, circles, data) {
     },
     "resolve+=0.2"
   );
+
+  // Phase 7: click interactivity on the resolved circles. Deliberately
+  // set up OUTSIDE the timeline (not tied to any scroll label) — clicking
+  // is a discrete user action independent of scroll position, and should
+  // keep working whether the pin is still active or has already released.
+  attachProfileClickHandlers(resolvedCircles, profileLabelElements, profileCentroids, profileBreakdown, data, viewBox);
+}
+
+/**
+ * Animates a profile label (count+name text) to a new position, scaling
+ * its clearance to a given radius and fading its opacity. Handles the
+ * text element's OWN x/y attributes AND its child tspans' x attributes —
+ * SVG multi-line text via tspans needs both updated to stay centered,
+ * since text-anchor:middle only centers relative to each tspan's own x.
+ *
+ * @param {SVGTextElement} textEl
+ * @param {number} cx
+ * @param {number} cy
+ * @param {number} radius
+ * @param {number} opacity
+ * @param {number} duration
+ */
+function _animateLabelTo(textEl, cx, cy, radius, opacity, duration) {
+  if (!textEl) return;
+  gsap.to(textEl, {
+    duration,
+    ease: "power2.inOut",
+    opacity,
+    attr: { x: cx, y: cy - radius - PROFILE_LABEL_CLEARANCE },
+  });
+  Array.from(textEl.children).forEach((tspan) => {
+    gsap.to(tspan, { duration, ease: "power2.inOut", attr: { x: cx } });
+  });
+}
+
+/**
+ * Phase 7 — click interactivity on the three resolved profile circles.
+ * Clicking one shows a detail panel (HIGH/MEDIUM breakdown + suggested
+ * strategy for that profile) and visually de-emphasizes the other two
+ * circles (shrink + reposition to the bottom), while the clicked circle
+ * grows and moves to upper-center. Clicking the same circle again, or
+ * the panel's "back" link, reverses everything.
+ *
+ * Deliberately independent of the scroll timeline — this is a discrete
+ * click action, not a scroll-scrubbed one, so plain gsap.to() calls are
+ * used here rather than anything tied to the pinned ScrollTrigger.
+ *
+ * @param {object} resolvedCircles - label -> SVGCircleElement (from _createResolvedCircles)
+ * @param {object} profileLabelElements - label -> SVGTextElement (from _createProfileLabels)
+ * @param {object} profileCentroids - label -> {x,y}, the ORIGINAL (unfocused) positions
+ * @param {object} profileBreakdown - data.summary.risk_profile_breakdown
+ * @param {object} data - Full predictions.json payload
+ * @param {SVGRect} viewBox - The SVG's viewBox.baseVal
+ */
+function attachProfileClickHandlers(resolvedCircles, profileLabelElements, profileCentroids, profileBreakdown, data, viewBox) {
+  const detailPanel = document.getElementById("risk-journey-detail");
+  const demographicsPanel = document.getElementById("risk-journey-demographics");
+  const backBtn = document.getElementById("risk-journey-detail-back");
+  const ctaBtn = document.getElementById("risk-journey-detail-cta");
+
+  const detailNameEl = document.getElementById("risk-journey-detail-name");
+  const detailHighEl = document.getElementById("risk-journey-detail-high");
+  const detailMediumEl = document.getElementById("risk-journey-detail-medium");
+  const detailStrategyEl = document.getElementById("risk-journey-detail-strategy");
+
+  let selectedLabel = null;
+
+  // Each profile's TRUE base radius (unfocused state) — needed so the
+  // "focused" scaled size is computed relative to that profile's actual
+  // size, not a one-size-fits-all constant. A 38-student blob and a
+  // 20-student blob shouldn't shrink to the same absolute radius.
+  const baseRadii = {};
+  Object.keys(PROFILE_CENTROID_FRACS).forEach((label) => {
+    baseRadii[label] = _clusterRadius(profileBreakdown[label] || 0, CLUSTER_TIGHTNESS_K);
+  });
+
+  /**
+   * Counts HIGH vs MEDIUM tier students within one profile — computed
+   * fresh per click from the real student array, never a precomputed or
+   * hardcoded split.
+   */
+  function _computeHighMediumSplit(profileLabel) {
+    let high = 0;
+    let medium = 0;
+    data.students.forEach((s) => {
+      if (s.risk_profile && s.risk_profile.label === profileLabel) {
+        if (s.risk_label === "HIGH") high++;
+        else if (s.risk_label === "MEDIUM") medium++;
+      }
+    });
+    return { high, medium };
+  }
+
+  function selectProfile(label) {
+    selectedLabel = label;
+
+    const selectedCentroid = {
+      x: viewBox.width * FOCUSED_SELECTED_FRAC.x,
+      y: viewBox.height * FOCUSED_SELECTED_FRAC.y,
+    };
+    const selectedRadius = baseRadii[label] * FOCUSED_SELECTED_SCALE;
+
+    gsap.to(resolvedCircles[label], {
+      duration: 0.7,
+      ease: "power2.inOut",
+      attr: { cx: selectedCentroid.x, cy: selectedCentroid.y, r: selectedRadius },
+    });
+    resolvedCircles[label].classList.add("risk-journey__resolved-circle--selected");
+    // The clicked circle's own floating label fades out — its name is
+    // already shown prominently as the detail panel's heading, so
+    // keeping both visible would be redundant.
+    _animateLabelTo(profileLabelElements[label], selectedCentroid.x, selectedCentroid.y, selectedRadius, 0, 0.4);
+
+    const otherLabels = Object.keys(PROFILE_CENTROID_FRACS).filter((l) => l !== label);
+    otherLabels.forEach((otherLabel, i) => {
+      const frac = FOCUSED_OTHER_FRACS[i];
+      const centroid = { x: viewBox.width * frac.x, y: viewBox.height * frac.y };
+      const radius = baseRadii[otherLabel] * FOCUSED_OTHER_SCALE;
+
+      gsap.to(resolvedCircles[otherLabel], {
+        duration: 0.7,
+        ease: "power2.inOut",
+        attr: { cx: centroid.x, cy: centroid.y, r: radius },
+      });
+      resolvedCircles[otherLabel].classList.remove("risk-journey__resolved-circle--selected");
+      _animateLabelTo(profileLabelElements[otherLabel], centroid.x, centroid.y, radius, 1, 0.7);
+    });
+
+    const { high, medium } = _computeHighMediumSplit(label);
+    const sampleStudent = data.students.find(
+      (s) => s.risk_profile && s.risk_profile.label === label
+    );
+
+    if (detailNameEl) detailNameEl.textContent = label;
+    if (detailHighEl) detailHighEl.textContent = high;
+    if (detailMediumEl) detailMediumEl.textContent = medium;
+    if (detailStrategyEl) {
+      detailStrategyEl.textContent = sampleStudent ? sampleStudent.risk_profile.suggested_strategy : "";
+    }
+
+    if (demographicsPanel) gsap.to(demographicsPanel, { opacity: 0, duration: 0.3 });
+    if (detailPanel) {
+      detailPanel.style.pointerEvents = "auto";
+      gsap.to(detailPanel, { opacity: 1, duration: 0.4, delay: 0.15 });
+    }
+  }
+
+  function deselectProfile() {
+    if (!selectedLabel) return;
+
+    Object.keys(PROFILE_CENTROID_FRACS).forEach((label) => {
+      const centroid = profileCentroids[label];
+      const radius = baseRadii[label];
+
+      gsap.to(resolvedCircles[label], {
+        duration: 0.6,
+        ease: "power2.inOut",
+        attr: { cx: centroid.x, cy: centroid.y, r: radius },
+      });
+      resolvedCircles[label].classList.remove("risk-journey__resolved-circle--selected");
+      _animateLabelTo(profileLabelElements[label], centroid.x, centroid.y, radius, 1, 0.6);
+    });
+
+    if (detailPanel) {
+      detailPanel.style.pointerEvents = "none";
+      gsap.to(detailPanel, { opacity: 0, duration: 0.3 });
+    }
+    if (demographicsPanel) {
+      gsap.to(demographicsPanel, { opacity: 1, duration: 0.4, delay: 0.15 });
+    }
+
+    selectedLabel = null;
+  }
+
+  Object.keys(resolvedCircles).forEach((label) => {
+    resolvedCircles[label].addEventListener("click", () => {
+      if (selectedLabel === label) {
+        deselectProfile();
+      } else {
+        selectProfile(label);
+      }
+    });
+  });
+
+  if (backBtn) backBtn.addEventListener("click", deselectProfile);
+
+  if (ctaBtn) {
+    ctaBtn.addEventListener("click", () => {
+      // Phase 8 hook — student-level drill-down not yet built.
+      console.log("[riskJourney] See detailed data clicked for:", selectedLabel);
+    });
+  }
 }
 
 /**

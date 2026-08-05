@@ -52,3 +52,4 @@ The goal is to use visual elements/shapes to represent students and the data we 
   - Test-metaball HTML and JS files added as a separate module to test the dots animation before full integration.
   - Merge tested blob animation into the actual scroll motion to go from a dot grid into two circular shapes (safe and at-risk students).
   - Clean up the UI to allow better storytelling, keeping the Risk-journey scroll-driven narrative and removing all the duplicated information in other sections.
+  - Added a second layer of interactivity that allows the user to inspect each of the three risk profiles data detail separatedly.
