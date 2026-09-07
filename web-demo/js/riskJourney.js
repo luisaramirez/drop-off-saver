@@ -477,6 +477,103 @@ function setGooFilterActive(dotsGroup, active) {
 }
 
 /**
+ * Maps the main timeline's current TIME position to a progress-bar step
+ * number (2-5 — step 1 is the load-triggered entrance, which isn't part
+ * of this timeline at all, so it's never returned here). Compares
+ * against the timeline's own labels rather than a separately-tracked
+ * "what step are we on" variable, so the progress bar can never drift
+ * out of sync with what's actually animating on screen.
+ *
+ * @param {number} time - tl.time()
+ * @param {object} labels - tl.labels (GSAP's own label->time map)
+ * @returns {number} Step 2, 3, 4, or 5
+ */
+function _currentStepForTime(time, labels) {
+  if (time < labels.merge) return 2; // colorwash
+  if (time < labels.isolate) return 3; // merge
+  if (time < labels.profiles) return 4; // isolate
+  return 5; // profiles or resolve
+}
+
+/**
+ * Updates the fixed left-side progress bar: which step marker is
+ * "active" (current), which are "complete" (already passed), and how
+ * tall the connecting fill line is (tied directly to overall timeline
+ * progress, not per-step).
+ *
+ * @param {number} step - Current step number (2-5)
+ * @param {number} progress - tl.progress(), 0 to 1
+ */
+function updateProgressBar(step, progress) {
+  document.querySelectorAll(".risk-journey__progress-step").forEach((el) => {
+    const s = parseInt(el.dataset.step, 10);
+    el.classList.toggle("risk-journey__progress-step--active", s === step);
+    el.classList.toggle("risk-journey__progress-step--complete", s < step);
+  });
+
+  const fill = document.getElementById("risk-journey-progress-fill");
+  if (fill) {
+    fill.style.height = `${Math.round(progress * 100)}%`;
+  }
+}
+
+/**
+ * Fires once the main timeline reaches full completion (progress >= 1,
+ * i.e. the "resolve" segment has entirely finished). Two things happen
+ * together: page scroll is locked (via a body class — see main.css
+ * .scroll-locked), and the completion instruction + "Watch again"
+ * button fade in.
+ *
+ * Locking scroll here specifically prevents a real interference problem:
+ * without it, a stray scroll gesture while the user is trying to click
+ * one of the three resolved circles could reverse the scrub-linked
+ * timeline mid-click (shrinking circles back into blobs), which reads
+ * as broken rather than intentional. Freezing scroll removes that
+ * possibility entirely while the user explores the circles.
+ */
+function lockScrollAndShowCompletion() {
+  document.body.classList.add("scroll-locked");
+  const completionEl = document.getElementById("risk-journey-completion");
+  if (completionEl) {
+    gsap.to(completionEl, { opacity: 1, duration: 0.5 });
+  }
+}
+
+/**
+ * Wires the "Watch again" button. Three things happen on click:
+ *   1. Scroll unlocks (removes the .scroll-locked body class).
+ *   2. The completion bar fades back out, and any currently-selected
+ *      profile's detail panel resets (via a programmatic click on the
+ *      existing "back" link — reuses attachProfileClickHandlers' own
+ *      deselect logic rather than duplicating it; harmless no-op if
+ *      nothing was selected, since that handler already guards for it).
+ *   3. The page scrolls back to the very top.
+ *
+ * That third step is doing more work than it looks like: because the
+ * main sequence is a SCRUBBED timeline (scrub: 1), scrolling back to a
+ * position before mainStart naturally reverses every tween in it — dots
+ * un-resolve back into blobs, un-split, un-isolate, un-merge, un-color —
+ * via the exact same scrub relationship that drives it forward. Nothing
+ * needs to be manually reset here beyond the three items above; the
+ * timeline's own reversibility handles the rest.
+ */
+function setupWatchAgain() {
+  const btn = document.getElementById("risk-journey-watch-again");
+  const backBtn = document.getElementById("risk-journey-detail-back");
+  const completionEl = document.getElementById("risk-journey-completion");
+  if (!btn) return;
+
+  btn.addEventListener("click", () => {
+    document.body.classList.remove("scroll-locked");
+    if (completionEl) {
+      gsap.to(completionEl, { opacity: 0, duration: 0.3 });
+    }
+    if (backBtn) backBtn.click();
+    window.scrollTo(0, 0);
+  });
+}
+
+/**
  * Computes a circle's target (x, y) when merged into its cluster, using
  * its pre-assigned fixed jitter angle/fraction (set once in
  * renderDotGrid) scaled by that cluster's current radius.
@@ -913,12 +1010,37 @@ function animateMainSequence(dotsGroup, circles, data) {
     },
   });
 
+  // Tracks whether the sequence has already reached full completion once
+  // (progress >= ~1) — used to fire lockScrollAndShowCompletion() exactly
+  // once per "run", not on every onUpdate tick while sitting at the end.
+  // Reset to false by the "Watch again" handler below, so it can fire
+  // again on a subsequent pass through the sequence.
+  let hasCompletedOnce = false;
+  const progressBar = document.getElementById("risk-journey-progress");
+
+  tl.eventCallback("onUpdate", () => {
+    const progress = tl.progress();
+    const step = _currentStepForTime(tl.time(), tl.labels);
+    updateProgressBar(step, progress);
+
+    if (progress >= 0.999 && !hasCompletedOnce) {
+      hasCompletedOnce = true;
+      lockScrollAndShowCompletion();
+    }
+  });
+
   // The "scroll to explore" cue has done its job the instant the user
   // starts scrolling (which is also the instant this pin engages, since
   // mainStart is "top top") — fade it out immediately so it doesn't sit
-  // awkwardly on screen through the rest of the sequence.
+  // awkwardly on screen through the rest of the sequence. The progress
+  // bar fades in at the same moment — nothing to show progress on
+  // before this point, since Step 1 (intro) isn't part of this pinned
+  // timeline at all (see animateEntranceOnLoad).
   if (scrollCue) {
     tl.to(scrollCue, { opacity: 0, duration: 0.3 }, 0);
+  }
+  if (progressBar) {
+    tl.to(progressBar, { opacity: 1, duration: 0.3 }, 0);
   }
 
   // --- Segment: colorwash ---
@@ -1071,6 +1193,8 @@ function animateMainSequence(dotsGroup, circles, data) {
   // is a discrete user action independent of scroll position, and should
   // keep working whether the pin is still active or has already released.
   attachProfileClickHandlers(resolvedCircles, profileLabelElements, profileCentroids, profileBreakdown, data, viewBox);
+
+  setupWatchAgain();
 }
 
 /**

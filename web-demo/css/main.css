@@ -75,6 +75,15 @@ body {
   overflow-x: hidden;
 }
 
+/* Applied by riskJourney.js:lockScrollAndShowCompletion() once the pinned
+   Risk Journey sequence fully completes — prevents stray scroll input
+   from reversing the resolve/profiles animation while the user is
+   trying to click one of the three resolved circles. Removed again by
+   setupWatchAgain() when the user clicks "Watch again". */
+body.scroll-locked {
+  overflow: hidden;
+}
+
 /* ── Utilities ───────────────────────────────────────────── */
 .reveal-text { opacity: 0; transform: translateY(2rem); }
 
@@ -157,6 +166,128 @@ body {
 @keyframes scroll-cue-pulse {
   0%, 100% { opacity: 0.3; transform: scaleX(1); }
   50%       { opacity: 1;   transform: scaleX(1.4); }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   RISK JOURNEY COMPLETION BAR
+   Shown once the pinned timeline reaches progress 1 (resolve fully
+   done). Occupies the same visual "bottom of section" spot the
+   scroll-cue used — the two are never visible at the same time, so no
+   layout conflict, just a role handoff at the moment scrolling locks.
+════════════════════════════════════════════════════════════ */
+.risk-journey__completion {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+  opacity: 0;
+}
+
+.risk-journey__completion span {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--c-text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.risk-journey__watch-again {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.risk-journey__watch-again:hover {
+  border-color: var(--c-amber-dim);
+  color: var(--c-amber);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   RISK JOURNEY PROGRESS BAR
+   Fixed to the viewport's left edge (not the section — a section child
+   with position:fixed still positions relative to the viewport, but is
+   kept as a section child so it never needs its own boot/teardown
+   logic; it simply lives and dies with the section). Current step is
+   driven by riskJourney.js reading the shared timeline's own progress —
+   see updateProgressBar(). Hidden below 768px for now (Phase 9 mobile
+   pass will revisit; a fixed-left sidebar has nowhere good to go on a
+   narrow viewport without redesigning the whole layout).
+════════════════════════════════════════════════════════════ */
+.risk-journey__progress {
+  position: fixed;
+  left: clamp(1rem, 3vw, 2.5rem);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.risk-journey__progress-track {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  background: var(--c-border);
+  overflow: hidden;
+  z-index: -1;
+}
+
+.risk-journey__progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 0%;
+  background: var(--c-amber);
+}
+
+.risk-journey__progress-step {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--c-bg-surface);
+  border: 2px solid var(--c-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--c-text-muted);
+  transition: border-color 0.3s ease, color 0.3s ease, background 0.3s ease, transform 0.3s ease;
+}
+
+.risk-journey__progress-step--active {
+  border-color: var(--c-amber);
+  color: var(--c-amber);
+  background: var(--c-amber-glow);
+  transform: scale(1.15);
+}
+
+.risk-journey__progress-step--complete {
+  border-color: var(--c-amber-dim);
+  color: var(--c-text-primary);
+  background: var(--c-bg-elevated);
+}
+
+@media (max-width: 768px) {
+  .risk-journey__progress { display: none; }
 }
 
 
