@@ -12,35 +12,37 @@
 
   <!-- ═══════════════════════════════════════════════════════════
        SECTION 1: RISK JOURNEY — the entire opening narrative
-       This is now the FIRST thing on the page (hero, signal,
-       distribution, and profiles sections were removed — their content
-       lives here now, as copy panels crossfading through this single
-       pinned scroll sequence).
+       This is the FIRST thing on the page (hero, signal, distribution,
+       and profiles sections were removed — their content lives here
+       now, as copy panels crossfading through this section's five
+       steps).
 
-       Two-phase behavior, both owned by riskJourney.js:
+       CLICK-DRIVEN, not scroll-driven. This changed from an earlier
+       scroll-scrubbed, pinned version — that made forward/backward
+       navigation dependent on scroll gesture precision, which was hard
+       to use. Now:
          1. LOAD-TRIGGERED ENTRANCE (animateEntranceOnLoad) — plays
-            automatically the instant the page loads, no scroll needed:
-            intro copy fades in, dots grow in, "scroll to explore" cue
-            appears. Nothing here is scroll-position-dependent, since
-            this section starts already at the top of the page — the old
-            "scroll it up from below the viewport" trigger doesn't apply
-            once there's no hero above it to reveal it from.
-         2. PINNED SCROLL SEQUENCE (animateMainSequence) — engages the
-            moment the user starts scrolling (start: "top top"), holding
-            the section fixed on screen through five labeled segments
-            (colorwash, merge, isolate, profiles, resolve) before
-            releasing to reveal the roster + system sections below.
+            automatically the instant the page loads, no interaction
+            needed: intro copy fades in, dots grow in. This establishes
+            Step 1's visual state.
+         2. STEP NAVIGATION (initStepNavigation / goToStep) — the
+            fixed left-side progress bar is the ONLY way to move between
+            steps, in any order, forward or backward. Clicking a step
+            number tweens every dot directly from wherever it currently
+            is to that step's target state (position, color, opacity,
+            goo filter on/off) — there is no scroll dependency anywhere
+            in this section anymore.
 
        Copy has FIVE stacked panels sharing one grid cell (see CSS), not
        one static block:
-         #risk-journey-intro        — resting state, visible on load
-         #risk-journey-signal       — crossfades in during "colorwash"
-         #risk-journey-thresholds   — crossfades in during "merge"
-         #risk-journey-profiling    — crossfades in during "isolate"
-         #risk-journey-demographics — crossfades in during "profiles"
-       All crossfades are driven by ONE shared GSAP timeline in
-       riskJourney.js (animateMainSequence), never independent triggers,
-       so copy and visuals can't drift out of sync with each other.
+         #risk-journey-intro        — Step 1
+         #risk-journey-signal       — Step 2
+         #risk-journey-thresholds   — Step 3
+         #risk-journey-profiling    — Step 4
+         #risk-journey-demographics — Step 5
+       All crossfades are driven by goToStep() in riskJourney.js, never
+       independent triggers, so copy and visuals can't drift out of
+       sync with each other.
   ════════════════════════════════════════════════════════════ -->
   <section class="section section--risk-journey" id="risk-journey">
     <div class="section__inner">
@@ -130,64 +132,68 @@
                  which sources each profile's description directly from a
                  real student record in predictions.json (risk_profile
                  .description) — never a second, hand-typed copy of text
-                 that already lives in profiler.py's RISK_PROFILES dict. -->
+                 that already lives in profiler.py's RISK_PROFILES dict.
+                 This panel NEVER changes when a bubble is selected — it
+                 always shows this same overview, by explicit design
+                 decision. Selecting a bubble only affects the right side
+                 (see #risk-journey-detail below, now living inside
+                 .risk-journey__canvas, not here). -->
             <div class="profile-legend" id="demographics-list"></div>
-          </div>
-
-          <!-- Phase 7: CLICK-driven, not part of the scroll-timed crossfade
-               sequence above. Hidden by default (opacity 0), shown/hidden
-               entirely by riskJourney.js's click handlers on the three
-               resolved circles — see attachProfileClickHandlers(). Content
-               (name, counts, strategy) populated fresh on every click, not
-               once on load, since it depends on WHICH circle was clicked. -->
-          <div class="risk-journey__copy-panel" id="risk-journey-detail">
-            <button class="risk-journey__back-link" id="risk-journey-detail-back">
-              ← All profiles
-            </button>
-            <div class="section__label" aria-hidden="true">Selected Profile</div>
-            <h2 class="section__heading" id="risk-journey-detail-name"></h2>
-
-            <div class="detail-risk-split">
-              <div class="detail-risk-split__item">
-                <span class="detail-risk-split__count" id="risk-journey-detail-high">0</span>
-                <span class="detail-risk-split__label">High risk</span>
-              </div>
-              <div class="detail-risk-split__item">
-                <span class="detail-risk-split__count" id="risk-journey-detail-medium">0</span>
-                <span class="detail-risk-split__label">Medium risk</span>
-              </div>
-            </div>
-
-            <div class="detail-strategy">
-              <div class="detail-strategy__label">Suggested strategy</div>
-              <p class="detail-strategy__text" id="risk-journey-detail-strategy"></p>
-            </div>
-
-            <button class="detail-cta" id="risk-journey-detail-cta">
-              See detailed data
-            </button>
           </div>
 
         </div>
 
         <div class="risk-journey__canvas" id="risk-journey-canvas">
           <!-- SVG dot grid rendered here by riskJourney.js -->
+
+          <!-- Click-driven, Step 5 only. Hidden by default (opacity 0),
+               shown/hidden entirely by riskJourney.js's click handlers on
+               the three resolved circles — see selectProfile() /
+               resetProfileSelection() in initStepNavigation(). Lives
+               HERE (inside the canvas, overlaying the lower portion of
+               it) rather than in the left copy-stack — the left panel
+               never changes on selection, per explicit design decision;
+               all per-profile detail is a right-side overlay instead,
+               positioned to sit beneath the selected (focused) bubble. -->
+          <div class="risk-journey__detail-card" id="risk-journey-detail">
+            <button class="risk-journey__detail-close" id="risk-journey-detail-back" aria-label="Close detail">
+              ✕
+            </button>
+            <h3 class="risk-journey__detail-name" id="risk-journey-detail-name"></h3>
+
+            <div class="risk-journey__detail-risk-split">
+              <div class="risk-journey__detail-risk-box risk-journey__detail-risk-box--high">
+                <span class="risk-journey__detail-risk-count">
+                  <span id="risk-journey-detail-high">0</span> students
+                </span>
+                <span class="risk-journey__detail-risk-label">High risk</span>
+              </div>
+              <div class="risk-journey__detail-risk-box risk-journey__detail-risk-box--medium">
+                <span class="risk-journey__detail-risk-count">
+                  <span id="risk-journey-detail-medium">0</span> students
+                </span>
+                <span class="risk-journey__detail-risk-label">Medium risk</span>
+              </div>
+            </div>
+
+            <div class="risk-journey__detail-strategy">
+              <div class="risk-journey__detail-strategy-label" id="risk-journey-detail-strategy-label">
+                Suggested strategy
+              </div>
+              <p class="risk-journey__detail-strategy-text" id="risk-journey-detail-strategy"></p>
+            </div>
+
+            <button class="risk-journey__detail-cta" id="risk-journey-detail-cta">
+              See detailed data
+            </button>
+          </div>
         </div>
 
       </div>
 
-      <div class="risk-journey__scroll-cue" id="risk-journey-scroll-cue" aria-hidden="true">
-        <span>Scroll for more</span>
-        <div class="scroll-cue__line"></div>
-      </div>
-
-      <!-- Shown once the "resolve" segment fully completes (timeline
-           progress reaches 1). Replaces the scroll-cue's role at that
-           point — scrolling is locked at that moment (see
-           lockScrollAndShowCompletion() in riskJourney.js) specifically
-           so stray scroll input doesn't reverse the resolve/profiles
-           animation while the user is trying to click a circle.
-           "Watch again" resets everything back to Step 1. -->
+      <!-- Shown while at Step 5. Not scroll-related anymore — see
+           riskJourney.js:goToStep(). "Watch again" is a shortcut with
+           the exact same effect as clicking progress step 1. -->
       <div class="risk-journey__completion" id="risk-journey-completion" aria-hidden="true">
         <span>Click each circle for details</span>
         <button class="risk-journey__watch-again" id="risk-journey-watch-again">
@@ -196,25 +202,38 @@
       </div>
     </div>
 
-    <!-- Fixed to the left edge of the viewport, not scrolling away with
-         the rest of the section's content — visible for the duration of
-         the pinned main sequence (steps 2-5), hidden during Step 1
-         (nothing to show progress on yet) and after "Watch again" resets
-         back to Step 1. Current step is driven entirely by
-         riskJourney.js reading the shared timeline's own progress/labels
-         — see updateProgressBar() — never a second, independently-
-         tracked "what step are we on" variable that could drift out of
-         sync with the actual animation. -->
-    <div class="risk-journey__progress" id="risk-journey-progress" aria-hidden="true">
+    <!-- Positioned to the left edge of the viewport in desktop, 
+         and to the top on tablets and mobile devices, always visible (not
+         faded in/out at any point) — this is now the PRIMARY way to
+         navigate the five steps, not a passive progress indicator.
+         Each button jumps directly to that step via
+         riskJourney.js:goToStep(), forward or backward, in any order —
+         no scrolling involved anywhere in this section. -->
+    <nav class="risk-journey__progress" id="risk-journey-progress" aria-label="Risk Journey steps">
       <div class="risk-journey__progress-track">
         <div class="risk-journey__progress-fill" id="risk-journey-progress-fill"></div>
       </div>
-      <div class="risk-journey__progress-step risk-journey__progress-step--active" data-step="1"><span>1</span></div>
-      <div class="risk-journey__progress-step" data-step="2"><span>2</span></div>
-      <div class="risk-journey__progress-step" data-step="3"><span>3</span></div>
-      <div class="risk-journey__progress-step" data-step="4"><span>4</span></div>
-      <div class="risk-journey__progress-step" data-step="5"><span>5</span></div>
-    </div>
+      <button class="risk-journey__progress-step risk-journey__progress-step--active" data-step="1">
+        <span class="risk-journey__progress-step-number">1</span>
+        <span class="risk-journey__progress-step-label">Early Warning System</span>
+      </button>
+      <button class="risk-journey__progress-step" data-step="2">
+        <span class="risk-journey__progress-step-number">2</span>
+        <span class="risk-journey__progress-step-label">The Signal</span>
+      </button>
+      <button class="risk-journey__progress-step" data-step="3">
+        <span class="risk-journey__progress-step-number">3</span>
+        <span class="risk-journey__progress-step-label">Risk Distribution</span>
+      </button>
+      <button class="risk-journey__progress-step" data-step="4">
+        <span class="risk-journey__progress-step-number">4</span>
+        <span class="risk-journey__progress-step-label">Risk Focus</span>
+      </button>
+      <button class="risk-journey__progress-step" data-step="5">
+        <span class="risk-journey__progress-step-number">5</span>
+        <span class="risk-journey__progress-step-label">Risk Profiles</span>
+      </button>
+    </nav>
   </section>
 
 

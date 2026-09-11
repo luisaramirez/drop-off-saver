@@ -75,15 +75,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Applied by riskJourney.js:lockScrollAndShowCompletion() once the pinned
-   Risk Journey sequence fully completes — prevents stray scroll input
-   from reversing the resolve/profiles animation while the user is
-   trying to click one of the three resolved circles. Removed again by
-   setupWatchAgain() when the user clicks "Watch again". */
-body.scroll-locked {
-  overflow: hidden;
-}
-
 /* ── Utilities ───────────────────────────────────────────── */
 .reveal-text { opacity: 0; transform: translateY(2rem); }
 
@@ -92,7 +83,7 @@ body.scroll-locked {
   min-height: 100vh;
   display: flex;
   align-items: center;
-  padding: var(--space-section) max(2rem, 5vw);
+  padding: var(--space-section) max(2rem, 3vw);
 }
 
 .section__inner {
@@ -139,42 +130,11 @@ body.scroll-locked {
    originally written for the now-removed hero section — kept because
    this is the same visual cue, just relocated.
 ════════════════════════════════════════════════════════════ */
-.risk-journey__scroll-cue {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-top: 2.5rem;
-  opacity: 0;
-}
-
-.risk-journey__scroll-cue span {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-text-muted);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.scroll-cue__line {
-  width: 48px;
-  height: 1px;
-  background: var(--c-text-muted);
-  transform-origin: left;
-  animation: scroll-cue-pulse 2s ease-in-out infinite;
-}
-
-@keyframes scroll-cue-pulse {
-  0%, 100% { opacity: 0.3; transform: scaleX(1); }
-  50%       { opacity: 1;   transform: scaleX(1.4); }
-}
-
-
 /* ═══════════════════════════════════════════════════════════
    RISK JOURNEY COMPLETION BAR
-   Shown once the pinned timeline reaches progress 1 (resolve fully
-   done). Occupies the same visual "bottom of section" spot the
-   scroll-cue used — the two are never visible at the same time, so no
-   layout conflict, just a role handoff at the moment scrolling locks.
+   Shown while at Step 5 (via riskJourney.js:goToStep(5)) — hidden
+   whenever any other step is active. "Watch again" is a shortcut with
+   the exact same effect as clicking progress step 1.
 ════════════════════════════════════════════════════════════ */
 .risk-journey__completion {
   display: flex;
@@ -224,25 +184,22 @@ body.scroll-locked {
    narrow viewport without redesigning the whole layout).
 ════════════════════════════════════════════════════════════ */
 .risk-journey__progress {
-  position: fixed;
-  left: clamp(1rem, 3vw, 2.5rem);
+  position: relative;
+  left: 0px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 1.75rem;
+  align-items: flex-start;
+  gap: 1.5rem;
   z-index: 20;
-  opacity: 0;
-  pointer-events: none;
 }
 
 .risk-journey__progress-track {
   position: absolute;
   top: 14px;
   bottom: 14px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 14px;
   width: 2px;
   background: var(--c-border);
   overflow: hidden;
@@ -259,6 +216,18 @@ body.scroll-locked {
 }
 
 .risk-journey__progress-step {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.risk-journey__progress-step-number {
+  flex-shrink: 0;
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -273,21 +242,78 @@ body.scroll-locked {
   transition: border-color 0.3s ease, color 0.3s ease, background 0.3s ease, transform 0.3s ease;
 }
 
-.risk-journey__progress-step--active {
-  border-color: var(--c-amber);
-  color: var(--c-amber);
-  background: var(--c-amber-glow);
-  transform: scale(1.15);
+.risk-journey__progress-step-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+  transition: color 0.3s ease;
 }
 
-.risk-journey__progress-step--complete {
+.risk-journey__progress-step:hover .risk-journey__progress-step-number {
+  border-color: var(--c-amber-dim);
+  color: var(--c-text-primary);
+}
+.risk-journey__progress-step:hover .risk-journey__progress-step-label {
+  color: var(--c-text-primary);
+}
+
+.risk-journey__progress-step--active .risk-journey__progress-step-number {
+  border-color: var(--c-amber);
+  color: var(--c-amber);
+  transform: scale(1.15);
+}
+.risk-journey__progress-step--active .risk-journey__progress-step-label {
+  color: var(--c-amber);
+}
+
+.risk-journey__progress-step--complete .risk-journey__progress-step-number {
   border-color: var(--c-amber-dim);
   color: var(--c-text-primary);
   background: var(--c-bg-elevated);
 }
+.risk-journey__progress-step--complete .risk-journey__progress-step-label {
+  color: var(--c-text-secondary);
+}
 
-@media (max-width: 768px) {
-  .risk-journey__progress { display: none; }
+@media (max-width: 900px) {
+  .section--risk-journey{
+    flex-direction: column-reverse !important;
+  }
+  .risk-journey__progress {
+    top: 10%;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    width: 600px;
+    justify-content: center;
+    z-index: 20;
+    gap: 1rem;
+}
+
+.risk-journey__progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.risk-journey__progress-track {
+  transform: rotate(270deg);
+  top: 15px;
+  left: 74px;
+  bottom: 0px;
+  height: 470px;
+  -webkit-transform-origin-y: top;
+  transform: rotate(270deg);
+}
+
+.risk-journey__copy-stack {
+  width: 100% !important;
+}
+
 }
 
 
@@ -679,7 +705,9 @@ body.scroll-locked {
    are NOT yet styled here — added incrementally as those phases land.
 ════════════════════════════════════════════════════════════ */
 .section--risk-journey {
+  flex-direction: row-reverse;
   background-color: var(--c-bg);
+  gap: 3rem;
 }
 
 .risk-journey__layout {
@@ -717,6 +745,7 @@ body.scroll-locked {
 #risk-journey-detail { opacity: 0; pointer-events: none; }
 
 .risk-journey__canvas {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;

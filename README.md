@@ -246,4 +246,5 @@ This is a summary of the changes. For more specific information, please refer to
 
 **Version 3:** A profiling layer was added to the program's logic, to cluster at-risk students into actionable intervention groups with custom retention plans.
 
+**Version 4:** Storytelling was corrected to prioritize navigation ease and readability for users. Moved from scroll-driven to progress bar buttons, we iterated until finding the simplest way to represent this amount of data visually.
 ---
