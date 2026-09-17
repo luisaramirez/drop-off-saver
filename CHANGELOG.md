@@ -54,4 +54,5 @@ The goal is to use visual elements/shapes to represent students and the data we 
   - Clean up the UI to allow better storytelling, keeping the Risk-journey scroll-driven narrative and removing all the duplicated information in other sections.
   - Added a second layer of interactivity that allows the user to inspect each of the three risk profiles data detail separatedly.
   - Scrolling replaced by progress-bar buttons to allow a smoother interaction between the process steps.
-  - Re-arrangement of the Profile screen information to improve readability and path feedback for users.
+  - Re-arrangement of the risk profiles screen information to improve readability and user's feedback.
+  - Error handling of overlapping areas across the whole interaction.

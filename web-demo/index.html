@@ -145,8 +145,15 @@
 
         <div class="risk-journey__canvas" id="risk-journey-canvas">
           <!-- SVG dot grid rendered here by riskJourney.js -->
-
-          <!-- Click-driven, Step 5 only. Hidden by default (opacity 0),
+        </div>
+          <!-- Shown while at Step 5. Not scroll-related anymore — see
+           riskJourney.js:goToStep(). "Watch again" is a shortcut with
+           the exact same effect as clicking progress step 1. -->
+          <div class="risk-journey__completion" id="risk-journey-completion" aria-hidden="true">
+            <span>Click each circle for details</span>
+          </div>
+          
+              <!-- Click-driven, Step 5 only. Hidden by default (opacity 0),
                shown/hidden entirely by riskJourney.js's click handlers on
                the three resolved circles — see selectProfile() /
                resetProfileSelection() in initStepNavigation(). Lives
@@ -187,28 +194,16 @@
               See detailed data
             </button>
           </div>
-        </div>
-
       </div>
 
-      <!-- Shown while at Step 5. Not scroll-related anymore — see
-           riskJourney.js:goToStep(). "Watch again" is a shortcut with
-           the exact same effect as clicking progress step 1. -->
-      <div class="risk-journey__completion" id="risk-journey-completion" aria-hidden="true">
-        <span>Click each circle for details</span>
-        <button class="risk-journey__watch-again" id="risk-journey-watch-again">
-          ↺ Watch again
-        </button>
-      </div>
     </div>
 
-    <!-- Positioned to the left edge of the viewport in desktop, 
-         and to the top on tablets and mobile devices, always visible (not
+    <!-- Fixed to the left edge of the viewport, always visible (not
          faded in/out at any point) — this is now the PRIMARY way to
          navigate the five steps, not a passive progress indicator.
          Each button jumps directly to that step via
          riskJourney.js:goToStep(), forward or backward, in any order —
-         no scrolling involved anywhere in this section. -->
+         no scrolling involved anywhere in this section anymore. -->
     <nav class="risk-journey__progress" id="risk-journey-progress" aria-label="Risk Journey steps">
       <div class="risk-journey__progress-track">
         <div class="risk-journey__progress-fill" id="risk-journey-progress-fill"></div>
@@ -236,66 +231,12 @@
     </nav>
   </section>
 
-
   <!-- ═══════════════════════════════════════════════════════════
-       SECTION 2: ROSTER — the at-risk students table
-  ════════════════════════════════════════════════════════════ -->
-  <section class="section section--roster" id="roster">
-    <div class="section__inner">
-      <div class="section__label" aria-hidden="true">02 — Student Roster</div>
-      <h2 class="section__heading reveal-text">
-        The students who need intervention.
-      </h2>
-      <p class="section__body" style="margin-bottom: 1.5rem;">
-        Every at-risk student is matched to one of three behavioral profiles —
-        each with a distinct, tailored retention strategy. Not every dropout
-        risk looks the same, and the right outreach depends on knowing which
-        kind of risk you're looking at.
-      </p>
-
-      <div class="roster__controls">
-        <div class="roster__filter-group" role="group" aria-label="Filter by risk level">
-          <button class="filter-btn filter-btn--active" data-filter="all">All Risk</button>
-          <button class="filter-btn filter-btn--high" data-filter="HIGH">High</button>
-          <button class="filter-btn filter-btn--medium" data-filter="MEDIUM">Medium</button>
-        </div>
-        <div class="roster__filter-group" role="group" aria-label="Filter by risk profile">
-          <button class="filter-btn filter-btn--active" data-profile-filter="all">All Profiles</button>
-          <button class="filter-btn filter-btn--time-constrained" data-profile-filter="Time-Constrained">Time-Constrained</button>
-          <button class="filter-btn filter-btn--disengaged" data-profile-filter="Disengaged Learner">Disengaged</button>
-          <button class="filter-btn filter-btn--quiet-decliner" data-profile-filter="Quiet Decliner">Quiet Decliner</button>
-        </div>
-        <div class="roster__count" id="roster-count">
-          Showing <span id="roster-visible-count">—</span> students
-        </div>
-      </div>
-
-      <div class="roster__table-wrap" role="region" aria-label="At-risk student table" tabindex="0">
-        <table class="roster__table" id="roster-table">
-          <thead>
-            <tr>
-              <th scope="col">Student ID</th>
-              <th scope="col">Risk Score</th>
-              <th scope="col">Risk Level</th>
-              <th scope="col">Risk Profile</th>
-              <th scope="col">Suggested Strategy</th>
-            </tr>
-          </thead>
-          <tbody id="roster-tbody">
-            <!-- Populated by app.js -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- ═══════════════════════════════════════════════════════════
-       SECTION 3: SYSTEM — architecture explainer
+       SECTION 2: SYSTEM — architecture explainer
   ════════════════════════════════════════════════════════════ -->
   <section class="section section--system" id="system">
     <div class="section__inner">
-      <div class="section__label" aria-hidden="true">03 — System Design</div>
+      <div class="section__label" aria-hidden="true">System Design</div>
       <h2 class="section__heading reveal-text">
         Three layers. One contract.
       </h2>
@@ -349,6 +290,60 @@
 
     </div>
   </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 3: ROSTER — the at-risk students table
+  ════════════════════════════════════════════════════════════ -->
+  <section class="section section--roster" id="roster">
+    <div class="section__inner">
+      <div class="section__label" aria-hidden="true">Student Roster</div>
+      <h2 class="section__heading reveal-text">
+        The students who need intervention.
+      </h2>
+      <p class="section__body" style="margin-bottom: 1.5rem;">
+        Every at-risk student is matched to one of three behavioral profiles —
+        each with a distinct, tailored retention strategy. Not every dropout
+        risk looks the same, and the right outreach depends on knowing which
+        kind of risk you're looking at.
+      </p>
+
+      <div class="roster__controls">
+        <div class="roster__filter-group" role="group" aria-label="Filter by risk level">
+          <button class="filter-btn filter-btn--active" data-filter="all">All Risk</button>
+          <button class="filter-btn filter-btn--high" data-filter="HIGH">High</button>
+          <button class="filter-btn filter-btn--medium" data-filter="MEDIUM">Medium</button>
+        </div>
+        <div class="roster__filter-group" role="group" aria-label="Filter by risk profile">
+          <button class="filter-btn filter-btn--active" data-profile-filter="all">All Profiles</button>
+          <button class="filter-btn filter-btn--time-constrained" data-profile-filter="Time-Constrained">Time-Constrained</button>
+          <button class="filter-btn filter-btn--disengaged" data-profile-filter="Disengaged Learner">Disengaged</button>
+          <button class="filter-btn filter-btn--quiet-decliner" data-profile-filter="Quiet Decliner">Quiet Decliner</button>
+        </div>
+        <div class="roster__count" id="roster-count">
+          Showing <span id="roster-visible-count">—</span> students
+        </div>
+      </div>
+
+      <div class="roster__table-wrap" role="region" aria-label="At-risk student table" tabindex="0">
+        <table class="roster__table" id="roster-table">
+          <thead>
+            <tr>
+              <th scope="col">Student ID</th>
+              <th scope="col">Risk Score</th>
+              <th scope="col">Risk Level</th>
+              <th scope="col">Risk Profile</th>
+              <th scope="col">Suggested Strategy</th>
+            </tr>
+          </thead>
+          <tbody id="roster-tbody">
+            <!-- Populated by app.js -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+
 
 
   <!-- ═══════════════════════════════════════════════════════════

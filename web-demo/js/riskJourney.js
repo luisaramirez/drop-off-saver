@@ -141,19 +141,18 @@ const PROFILE_COLOR_VARS = {
 // cause of the name line nearly touching/overlapping the blob.
 const PROFILE_LABEL_CLEARANCE = 34;
 
-// Click-to-focus interaction (Step 5 only): where the clicked ("selected")
-// circle and the two non-clicked ("other") circles move to, expressed as
-// viewBox fractions — same convention as every other centroid in this
-// file, so the layout stays correct regardless of dataset size. The
-// selected circle moves to upper-center and grows slightly (the visual
-// "subject" of the detail panel now showing on the left); the other two
-// shrink and move to the bottom, still visible but clearly de-emphasized.
-const FOCUSED_SELECTED_FRAC = { x: 0.5, y: 0.32 };
-const FOCUSED_SELECTED_SCALE = 1.15;
-const FOCUSED_OTHER_FRACS = [
-  { x: 0.3, y: 0.82 },
-  { x: 0.7, y: 0.82 },
-];
+// Click-to-focus interaction (Step 5 only). The SELECTED profile's
+// bubble fades out entirely rather than repositioning — its identity is
+// already fully carried by the detail panel (name, counts, strategy,
+// all in its own color), so keeping a large redundant circle on screen
+// would only compete with that panel and risk overlapping it.
+//
+// The two remaining bubbles shrink by this factor and move to the
+// upper-right. Their exact x positions are NOT fixed constants — they're
+// computed at selection time from the bubbles' actual radii and label
+// widths (see selectProfile), since fixed fractions can't guarantee
+// non-overlap across every combination of which profile is selected and
+// how the dataset's profile counts happen to fall.
 const FOCUSED_OTHER_SCALE = 0.55;
 
 // Shared tween duration for step-to-step transitions — deliberately the
@@ -444,6 +443,23 @@ function updateProgressBar(step) {
 }
 
 /**
+ * Enables/disables the five progress-bar step buttons during a step
+ * transition. Sets the `disabled` property (not just a CSS class) so the
+ * browser itself refuses the click — belt-and-braces alongside
+ * goToStep's own isTransitioning guard, and it gets keyboard/screen
+ * reader semantics right for free rather than only blocking mouse input.
+ * The matching CSS class drives the visual dimmed/not-allowed state.
+ *
+ * @param {boolean} enabled
+ */
+function _setStepButtonsEnabled(enabled) {
+  document.querySelectorAll(".risk-journey__progress-step").forEach((el) => {
+    el.disabled = !enabled;
+    el.classList.toggle("risk-journey__progress-step--locked", !enabled);
+  });
+}
+
+/**
  * Computes a circle's target (x, y) when merged into its 2-cluster
  * group (Step 3), using its pre-assigned fixed jitter angle/fraction
  * (set once in renderDotGrid) scaled by that cluster's current radius.
@@ -663,6 +679,15 @@ function animateEntranceOnLoad(circles, data) {
   const body = introPanel ? introPanel.querySelector(".section__body") : null;
 
   gsap.set(circles, { attr: { r: 0 } });
+  // Explicitly set grey fill. Without this, the CSS attribute selectors
+  // in main.css (.risk-journey__dot[data-risk-label="HIGH"] etc.) apply
+  // immediately and the dots render ALREADY COLORED on first load —
+  // i.e. visually in Step 2's state while the progress bar says Step 1.
+  // Setting fill inline here wins over those selectors, so the grid
+  // genuinely starts grey and only colors when Step 2 is clicked. (Those
+  // CSS selectors still matter as the no-JS/reduced-motion fallback, so
+  // they're deliberately left in place rather than removed.)
+  gsap.set(circles, { fill: _resolveCSSColor("--c-border") });
   if (label) gsap.set(label, { opacity: 0, y: 10 });
   if (heading) gsap.set(heading, { opacity: 0, y: 16 });
   if (body) gsap.set(body, { opacity: 0, y: 16 });
@@ -794,6 +819,13 @@ function initStepNavigation(dotsGroup, circles, data) {
 
   let currentStep = 1;
   let selectedProfile = null;
+  // Guards against rapid successive clicks on the progress bar. Without
+  // it, a second click mid-transition starts a new set of tweens while
+  // the previous set is still running — both target the same elements,
+  // so they fight, and panels/labels end up visibly overlapping in
+  // half-finished states. Set true when a transition starts, cleared
+  // when it finishes (see goToStep).
+  let isTransitioning = false;
 
   /** Crossfades to the target step's copy panel, hiding all others. */
   function showPanel(step) {
@@ -832,6 +864,10 @@ function initStepNavigation(dotsGroup, circles, data) {
       gsap.to(resolvedCircles[label], {
         duration: 0.6,
         ease: "power2.inOut",
+        // opacity must be restored explicitly: selectProfile now fades
+        // the selected bubble fully out, so without this it would stay
+        // invisible after deselecting.
+        opacity: 1,
         attr: { cx: centroid.x, cy: centroid.y, r: radius },
       });
       resolvedCircles[label].classList.remove("risk-journey__resolved-circle--selected");
@@ -842,44 +878,56 @@ function initStepNavigation(dotsGroup, circles, data) {
       detailPanel.style.pointerEvents = "none";
       gsap.to(detailPanel, { opacity: 0, duration: 0.3 });
     }
-    if (panels[5]) {
-      gsap.to(panels[5], { opacity: 1, duration: 0.4, delay: 0.15 });
-    }
 
     selectedProfile = null;
   }
 
-  /** Focuses one profile's resolved circle, shrinking the other two. */
+  /** Focuses one profile: fades its bubble out, repositions the other two. */
   function selectProfile(label) {
     selectedProfile = label;
 
-    const selectedCentroid = {
-      x: viewBox.width * FOCUSED_SELECTED_FRAC.x,
-      y: viewBox.height * FOCUSED_SELECTED_FRAC.y,
-    };
-    const selectedRadius = baseRadii[label] * FOCUSED_SELECTED_SCALE;
-
-    gsap.to(resolvedCircles[label], {
-      duration: 0.7,
-      ease: "power2.inOut",
-      attr: { cx: selectedCentroid.x, cy: selectedCentroid.y, r: selectedRadius },
-    });
+    // The selected bubble fades away entirely rather than moving and
+    // growing. Its identity is already fully represented by the detail
+    // panel (name heading, counts, strategy, all in its own color), so
+    // keeping a large redundant circle on screen only competes with that
+    // panel for attention and risks overlapping it.
+    gsap.to(resolvedCircles[label], { opacity: 0, duration: 0.45, ease: "power2.inOut" });
     resolvedCircles[label].classList.add("risk-journey__resolved-circle--selected");
-    _animateLabelTo(profileLabelElements[label], selectedCentroid.x, selectedCentroid.y, selectedRadius, 0, 0.4);
+    gsap.to(profileLabelElements[label], { opacity: 0, duration: 0.35 });
 
+    // The two remaining bubbles sit side by side in the upper-right.
+    // Their x positions are computed from their ACTUAL radii rather than
+    // fixed viewBox fractions: with fixed fractions, two large profiles
+    // (or a narrow viewBox) could overlap each other, and their labels
+    // — which are wider than the bubbles themselves — would collide well
+    // before the circles did. Spacing off real widths guarantees
+    // separation regardless of which profile is selected or how the
+    // dataset's profile counts shift.
     const otherLabels = Object.keys(PROFILE_CENTROID_FRACS).filter((l) => l !== label);
+    const otherRadii = otherLabels.map((l) => baseRadii[l] * FOCUSED_OTHER_SCALE);
+    // Label text is the real constraint on spacing, not circle width —
+    // a 12px-radius bubble can carry a "DISENGAGED LEARNER" label several
+    // times wider than itself.
+    const labelHalfWidth = 62;
+    const slotHalfWidth = Math.max(otherRadii[0], otherRadii[1], labelHalfWidth);
+    const gap = 16;
+    const totalWidth = slotHalfWidth * 4 + gap;
+    const rightEdge = viewBox.width * 0.97;
+    const firstCx = rightEdge - totalWidth + slotHalfWidth;
+    const otherCy = viewBox.height * 0.16;
+
     otherLabels.forEach((otherLabel, i) => {
-      const frac = FOCUSED_OTHER_FRACS[i];
-      const centroid = { x: viewBox.width * frac.x, y: viewBox.height * frac.y };
-      const radius = baseRadii[otherLabel] * FOCUSED_OTHER_SCALE;
+      const cx = firstCx + i * (slotHalfWidth * 2 + gap);
+      const radius = otherRadii[i];
 
       gsap.to(resolvedCircles[otherLabel], {
         duration: 0.7,
         ease: "power2.inOut",
-        attr: { cx: centroid.x, cy: centroid.y, r: radius },
+        opacity: 1,
+        attr: { cx, cy: otherCy, r: radius },
       });
       resolvedCircles[otherLabel].classList.remove("risk-journey__resolved-circle--selected");
-      _animateLabelTo(profileLabelElements[otherLabel], centroid.x, centroid.y, radius, 1, 0.7);
+      _animateLabelTo(profileLabelElements[otherLabel], cx, otherCy, radius, 1, 0.7);
     });
 
     const { high, medium } = _computeHighMediumSplit(label);
@@ -894,8 +942,12 @@ function initStepNavigation(dotsGroup, circles, data) {
       detailStrategyEl.textContent = sampleStudent ? sampleStudent.risk_profile.suggested_strategy : "";
     }
 
-    if (panels[5]) gsap.to(panels[5], { opacity: 0, duration: 0.3 });
+    // Single write, three consumers: the button background, the profile
+    // name heading, and the "Suggested strategy" label all reference
+    // var(--profile-accent-color) in CSS (main.css) — setting it once
+    // here means those three can never disagree with each other.
     if (detailPanel) {
+      detailPanel.style.setProperty("--profile-accent-color", profileColorMap[label]);
       detailPanel.style.pointerEvents = "auto";
       gsap.to(detailPanel, { opacity: 1, duration: 0.4, delay: 0.15 });
     }
@@ -913,6 +965,12 @@ function initStepNavigation(dotsGroup, circles, data) {
    */
   function goToStep(step) {
     if (step === currentStep) return;
+    // Ignore clicks fired while a transition is still running — see the
+    // isTransitioning declaration above for why.
+    if (isTransitioning) return;
+
+    isTransitioning = true;
+    _setStepButtonsEnabled(false);
 
     resetProfileSelection();
 
@@ -1012,6 +1070,11 @@ function initStepNavigation(dotsGroup, circles, data) {
 
       default:
         console.warn(`[riskJourney] goToStep called with invalid step: ${step}`);
+        // Release the lock before bailing out — without this, an invalid
+        // step number would leave isTransitioning stuck true forever and
+        // permanently freeze all navigation.
+        isTransitioning = false;
+        _setStepButtonsEnabled(true);
         return;
     }
 
@@ -1023,6 +1086,18 @@ function initStepNavigation(dotsGroup, circles, data) {
     }
 
     currentStep = step;
+
+    // Release the lock once every tween in this transition has finished.
+    // Uses gsap.delayedCall rather than an onComplete on any one tween:
+    // each step fires SEVERAL parallel tweens with different durations,
+    // staggers, and delays, so no single tween reliably marks "the whole
+    // transition is done." The longest possible tail is the Step 5 case
+    // (0.3s delay + 0.6s duration), so STEP_TRANSITION_DURATION plus the
+    // stagger amount safely covers every branch.
+    gsap.delayedCall(STEP_TRANSITION_DURATION + 0.6, () => {
+      isTransitioning = false;
+      _setStepButtonsEnabled(true);
+    });
   }
 
   // Wire the progress bar's five buttons — the ONLY navigation control
@@ -1033,12 +1108,6 @@ function initStepNavigation(dotsGroup, circles, data) {
       goToStep(step);
     });
   });
-
-  // "Watch again" — identical effect to clicking progress step 1.
-  const watchAgainBtn = document.getElementById("risk-journey-watch-again");
-  if (watchAgainBtn) {
-    watchAgainBtn.addEventListener("click", () => goToStep(1));
-  }
 
   // Step 5's resolved-circle click interaction.
   Object.keys(resolvedCircles).forEach((label) => {

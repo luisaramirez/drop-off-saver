@@ -139,9 +139,13 @@ body {
 .risk-journey__completion {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  margin-top: 2.5rem;
+  justify-content: center;
   opacity: 0;
+
+  position: absolute;
+  width: 50%;
+  bottom: 30%;
+  right: 0%;
 }
 
 .risk-journey__completion span {
@@ -151,26 +155,6 @@ body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-
-.risk-journey__watch-again {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 0.45rem 0.9rem;
-  border-radius: 4px;
-  border: 1px solid var(--c-border);
-  background: transparent;
-  color: var(--c-text-secondary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.risk-journey__watch-again:hover {
-  border-color: var(--c-amber-dim);
-  color: var(--c-amber);
-}
-
 
 /* ═══════════════════════════════════════════════════════════
    RISK JOURNEY PROGRESS BAR
@@ -259,9 +243,27 @@ body {
   color: var(--c-text-primary);
 }
 
+/* Applied by riskJourney.js:_setStepButtonsEnabled() while a step
+   transition is mid-flight. The buttons also get the real `disabled`
+   property set, so this is purely the visual signal — clicking is
+   already blocked by the browser at that point. Hover styles are
+   suppressed here so a locked button doesn't falsely appear
+   interactive. */
+.risk-journey__progress-step--locked {
+  cursor: not-allowed;
+}
+.risk-journey__progress-step--locked:hover .risk-journey__progress-step-number {
+  border-color: var(--c-border);
+  color: var(--c-text-muted);
+}
+.risk-journey__progress-step--locked:hover .risk-journey__progress-step-label {
+  color: var(--c-text-muted);
+}
+
 .risk-journey__progress-step--active .risk-journey__progress-step-number {
   border-color: var(--c-amber);
   color: var(--c-amber);
+  /* background: var(--c-amber-glow); */
   transform: scale(1.15);
 }
 .risk-journey__progress-step--active .risk-journey__progress-step-label {
@@ -312,6 +314,11 @@ body {
 
 .risk-journey__copy-stack {
   width: 100% !important;
+}
+
+.risk-journey__completion {
+    width: 100%;
+    bottom: 17%;
 }
 
 }
@@ -451,93 +458,140 @@ body {
    Shown/hidden entirely via riskJourney.js click handlers, not part of
    the scroll-timed crossfade sequence — see attachProfileClickHandlers().
 ════════════════════════════════════════════════════════════ */
-.risk-journey__back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
+/* ═══════════════════════════════════════════════════════════
+   RISK JOURNEY — detail card (click-driven, Step 5 only)
+   Lives INSIDE .risk-journey__canvas (position:relative, set above),
+   overlaying its lower portion — NOT in the left copy-stack. The left
+   panel never changes on selection, per explicit design decision.
+
+   Color-matching: button background, the profile-name heading, and the
+   "Suggested strategy" label all recolor to match the selected bubble
+   (violet/cyan/rose depending on profile). Rather than three separate
+   inline styles set from JS, riskJourney.js sets ONE CSS custom
+   property (--profile-accent-color) on the card's root element per
+   selection, and each of those three rules below just references it —
+   one write, three consumers, impossible for them to disagree.
+════════════════════════════════════════════════════════════ */
+.risk-journey__detail-card {
+  position: absolute;
+  max-width: 60ch;
+  right: 0%;
+  top: 30%;
+  background: var(--c-bg-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 14px;
+  padding: 1.5rem 1.75rem;
+}
+
+.risk-journey__detail-close {
+  position: absolute;
+  top: 0.9rem;
+  right: 1rem;
   background: none;
   border: none;
-  padding: 0;
-  margin-bottom: 1.25rem;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--c-text-muted);
+  font-size: var(--text-sm);
+  line-height: 1;
+  padding: 0.3rem;
   cursor: pointer;
   transition: color 0.15s ease;
 }
 
-.risk-journey__back-link:hover {
-  color: var(--c-amber);
-}
-
-.detail-risk-split {
-  display: flex;
-  gap: 2rem;
-  margin: 1.5rem 0;
-}
-
-.detail-risk-split__item {
-  display: flex;
-  flex-direction: column;
-}
-
-.detail-risk-split__count {
-  font-family: var(--font-display);
-  font-size: var(--text-3xl);
-  font-weight: 700;
+.risk-journey__detail-close:hover {
   color: var(--c-text-primary);
-  line-height: 1;
 }
 
-.detail-risk-split__label {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-top: 0.4rem;
+.risk-journey__detail-name {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--profile-accent-color, var(--c-text-primary));
+  margin-bottom: 1.1rem;
+  padding-right: 2rem;
 }
 
-.detail-strategy {
-  background: var(--c-bg-surface);
+.risk-journey__detail-risk-split {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.risk-journey__detail-risk-box {
+  flex: 1;
   border: 1px solid var(--c-border);
   border-radius: 8px;
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 1.75rem;
+  padding: 0.75rem 1rem;
 }
 
-.detail-strategy__label {
+.risk-journey__detail-risk-box--high {
+  border-color: rgba(232, 69, 60, 0.35);
+}
+
+.risk-journey__detail-risk-box--medium {
+  border-color: rgba(245, 200, 66, 0.35);
+}
+
+.risk-journey__detail-risk-count {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--c-text-primary);
+}
+
+.risk-journey__detail-risk-label {
+  display: block;
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  color: var(--c-amber);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 0.6rem;
+  letter-spacing: 0.05em;
+  margin-top: 0.3rem;
 }
 
-.detail-strategy__text {
-  font-size: var(--text-sm);
+.risk-journey__detail-risk-box--high .risk-journey__detail-risk-label {
+  color: var(--c-red);
+}
+
+.risk-journey__detail-risk-box--medium .risk-journey__detail-risk-label {
+  color: var(--c-yellow);
+}
+
+.risk-journey__detail-strategy {
+  margin-bottom: 1.4rem;
+}
+
+.risk-journey__detail-strategy-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--profile-accent-color, var(--c-amber));
+  margin-bottom: 0.5rem;
+}
+
+.risk-journey__detail-strategy-text {
+  font-size: var(--text-xs);
   color: var(--c-text-secondary);
   line-height: 1.6;
 }
 
-.detail-cta {
+.risk-journey__detail-cta {
+  width: 100%;
   font-family: var(--font-display);
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--c-bg);
-  background: var(--c-amber);
+  background: var(--profile-accent-color, var(--c-amber));
   border: none;
   border-radius: 6px;
-  padding: 0.75rem 1.5rem;
+  padding: 0.7rem 1.25rem;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition: filter 0.15s ease, transform 0.15s ease;
 }
 
-.detail-cta:hover {
-  background: #ffb84d;
+.risk-journey__detail-cta:hover {
+  filter: brightness(1.15);
   transform: translateY(-1px);
 }
 
@@ -711,6 +765,7 @@ body {
 }
 
 .risk-journey__layout {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 3rem;
@@ -742,7 +797,7 @@ body {
 #risk-journey-thresholds { opacity: 0; }
 #risk-journey-profiling { opacity: 0; }
 #risk-journey-demographics { opacity: 0; }
-#risk-journey-detail { opacity: 0; pointer-events: none; }
+#risk-journey-detail { opacity: 0; z-index:1000; pointer-events: none; }
 
 .risk-journey__canvas {
   position: relative;
