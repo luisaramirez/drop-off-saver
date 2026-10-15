@@ -317,6 +317,20 @@ function hideTooltip() {
   tooltip.setAttribute("aria-hidden", "true");
 }
 
+// Exposed globally so riskJourney.js's student drill-down dots can reuse
+// this EXACT tooltip system — same DOM element, same content format as
+// the roster table rows. There is only one #tooltip element on the page;
+// having two independent JS modules each build their own would either
+// require a second DOM element (visually inconsistent, more markup to
+// keep in sync) or silently fight over this one (last mouseover wins,
+// unpredictably). One owner, two callers, is the simpler structure.
+window.riskJourneyTooltip = {
+  show: showTooltip,
+  move: moveTooltip,
+  hide: hideTooltip,
+  buildContent: _buildTooltipContent,
+};
+
 // ---------------------------------------------------------------------------
 // GSAP — ScrollTrigger animations
 // ---------------------------------------------------------------------------

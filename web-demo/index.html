@@ -143,17 +143,14 @@
 
         </div>
 
+
+        <div class="risk-journey__dynamic_graphs" id="risk-journey-dynamic_graphs">
+
         <div class="risk-journey__canvas" id="risk-journey-canvas">
           <!-- SVG dot grid rendered here by riskJourney.js -->
         </div>
-          <!-- Shown while at Step 5. Not scroll-related anymore — see
-           riskJourney.js:goToStep(). "Watch again" is a shortcut with
-           the exact same effect as clicking progress step 1. -->
-          <div class="risk-journey__completion" id="risk-journey-completion" aria-hidden="true">
-            <span>Click each circle for details</span>
-          </div>
-          
-              <!-- Click-driven, Step 5 only. Hidden by default (opacity 0),
+
+<!-- Click-driven, Step 5 only. Hidden by default (opacity 0),
                shown/hidden entirely by riskJourney.js's click handlers on
                the three resolved circles — see selectProfile() /
                resetProfileSelection() in initStepNavigation(). Lives
@@ -166,36 +163,82 @@
             <button class="risk-journey__detail-close" id="risk-journey-detail-back" aria-label="Close detail">
               ✕
             </button>
-            <h3 class="risk-journey__detail-name" id="risk-journey-detail-name"></h3>
 
-            <div class="risk-journey__detail-risk-split">
-              <div class="risk-journey__detail-risk-box risk-journey__detail-risk-box--high">
-                <span class="risk-journey__detail-risk-count">
-                  <span id="risk-journey-detail-high">0</span> students
-                </span>
-                <span class="risk-journey__detail-risk-label">High risk</span>
+            <!-- Overview sub-state: name, HIGH/MEDIUM split, strategy,
+                 CTA. This is what shows first when a bubble is selected.
+                 Toggled by riskJourney.js (showDrilldown/showOverview) —
+                 both sub-states live inside the SAME detail card so
+                 there's only one opacity/pointer-events lifecycle to
+                 manage for the card as a whole; the ✕ above always
+                 closes the whole card regardless of which sub-state is
+                 currently showing. -->
+            <div id="risk-journey-detail-overview">
+              <h3 class="risk-journey__detail-name" id="risk-journey-detail-name"></h3>
+
+              <div class="risk-journey__detail-risk-split">
+                <div class="risk-journey__detail-risk-box risk-journey__detail-risk-box--high">
+                  <span class="risk-journey__detail-risk-count">
+                    <span id="risk-journey-detail-high">0</span> students
+                  </span>
+                  <span class="risk-journey__detail-risk-label">High risk</span>
+                </div>
+                <div class="risk-journey__detail-risk-box risk-journey__detail-risk-box--medium">
+                  <span class="risk-journey__detail-risk-count">
+                    <span id="risk-journey-detail-medium">0</span> students
+                  </span>
+                  <span class="risk-journey__detail-risk-label">Medium risk</span>
+                </div>
               </div>
-              <div class="risk-journey__detail-risk-box risk-journey__detail-risk-box--medium">
-                <span class="risk-journey__detail-risk-count">
-                  <span id="risk-journey-detail-medium">0</span> students
-                </span>
-                <span class="risk-journey__detail-risk-label">Medium risk</span>
+
+              <div class="risk-journey__detail-strategy">
+                <div class="risk-journey__detail-strategy-label" id="risk-journey-detail-strategy-label">
+                  Suggested strategy
+                </div>
+                <p class="risk-journey__detail-strategy-text" id="risk-journey-detail-strategy"></p>
               </div>
+
+              <button class="risk-journey__detail-cta" id="risk-journey-detail-cta">
+                See detailed data
+              </button>
             </div>
 
-            <div class="risk-journey__detail-strategy">
-              <div class="risk-journey__detail-strategy-label" id="risk-journey-detail-strategy-label">
-                Suggested strategy
+            <!-- Drill-down sub-state: individual student dots for the
+                 selected profile, shaded by risk score intensity within
+                 their tier. Hidden by default — shown only after "See
+                 detailed data" is clicked. Its own back button returns
+                 to the overview sub-state above (NOT the same as the ✕,
+                 which closes the card entirely back to the 3-bubble
+                 view). Dots + tooltips are rendered/wired entirely by
+                 riskJourney.js:renderDrilldownDots(), reusing app.js's
+                 tooltip system (window.riskJourneyTooltip) rather than
+                 building a second one. -->
+            <div id="risk-journey-detail-drilldown" class="risk-journey__drilldown" hidden>
+              <button class="risk-journey__drilldown-back" id="risk-journey-drilldown-back">
+                ← Back to strategy
+              </button>
+              <h3 class="risk-journey__detail-name" id="risk-journey-drilldown-name"></h3>
+              <p class="risk-journey__drilldown-text">
+                Students in this profile, shaded by risk score intensity. Hover or tap each dot to see the details for any student.
+              </p>
+              <div class="risk-journey__drilldown-canvas" id="risk-journey-drilldown-canvas">
+                <!-- Mini SVG dot grid rendered here by riskJourney.js -->
               </div>
-              <p class="risk-journey__detail-strategy-text" id="risk-journey-detail-strategy"></p>
             </div>
-
-            <button class="risk-journey__detail-cta" id="risk-journey-detail-cta">
-              See detailed data
-            </button>
           </div>
+
+        </div>
       </div>
 
+
+      <!-- Shown while at Step 5. Not scroll-related anymore — see
+           riskJourney.js:goToStep(). "Watch again" is a shortcut with
+           the exact same effect as clicking progress step 1. -->
+      <div class="risk-journey__completion" id="risk-journey-completion" aria-hidden="true">
+        <span>Click each circle for details</span>
+        <button class="risk-journey__watch-again" id="risk-journey-watch-again">
+          ↺ Watch again
+        </button>
+      </div>
     </div>
 
     <!-- Fixed to the left edge of the viewport, always visible (not

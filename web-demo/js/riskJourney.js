@@ -833,6 +833,7 @@ function initStepNavigation(dotsGroup, circles, data) {
       const panel = panels[key];
       if (!panel) return;
       gsap.to(panel, { opacity: Number(key) === step ? 1 : 0, duration: 0.4 });
+      gsap.to(panel, { display: Number(key) === step ? "block" : "none", duration: 0.4 });
     });
   }
 
@@ -854,8 +855,166 @@ function initStepNavigation(dotsGroup, circles, data) {
   }
 
   /** Restores all three resolved circles + labels to their Step 5 base layout. */
+  /**
+   * Converts a hex color string ("#e8453c") to its RGB components.
+   * @param {string} hex
+   */
+  function _hexToRgb(hex) {
+    const clean = hex.replace("#", "");
+    const bigint = parseInt(clean, 16);
+    return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
+  }
+
+  /**
+   * Linearly interpolates between two hex colors. weightA=1 returns
+   * colorA unchanged; weightA=0 returns colorB unchanged.
+   *
+   * Done manually (not via CSS color-mix()) so this works reliably
+   * across every browser this project might be viewed in, rather than
+   * depending on a newer CSS feature's support.
+   *
+   * @param {string} hexA
+   * @param {string} hexB
+   * @param {number} weightA - 0 to 1
+   */
+  function _mixColors(hexA, hexB, weightA) {
+    const a = _hexToRgb(hexA);
+    const b = _hexToRgb(hexB);
+    const r = Math.round(a.r * weightA + b.r * (1 - weightA));
+    const g = Math.round(a.g * weightA + b.g * (1 - weightA));
+    const bl = Math.round(a.b * weightA + b.b * (1 - weightA));
+    return `rgb(${r}, ${g}, ${bl})`;
+  }
+
+  /**
+   * Computes one student's drill-down dot color: their risk tier's base
+   * color (red for HIGH, yellow for MEDIUM), mixed with the dark surface
+   * color, weighted by where their SCORE sits within that tier's own
+   * range — not their score overall. A HIGH student just past the 0.75
+   * cutoff reads as a softer, more muted red; one near 1.0 reads as
+   * full-strength red. Matches the "softer if less at risk" shading from
+   * the original project reference sketches.
+   *
+   * @param {object} student - One student record from data.students
+   * @param {object} thresholds - { riskThreshold, highCutoff } from data
+   * @param {object} colors - resolved hex strings: { red, yellow, surface }
+   */
+  function _riskIntensityColor(student, thresholds, colors) {
+    const score = student.risk_score;
+    const isHigh = student.risk_label === "HIGH";
+    const tierMin = isHigh ? thresholds.highCutoff : thresholds.riskThreshold;
+    const tierMax = isHigh ? 1.0 : thresholds.highCutoff;
+    const range = tierMax - tierMin;
+    const intensity = range > 0 ? Math.max(0, Math.min(1, (score - tierMin) / range)) : 1;
+    const baseColor = isHigh ? colors.red : colors.yellow;
+    // Floor of 0.35 keeps even the least-intense dot clearly visible
+    // against the dark card surface, rather than fading toward
+    // near-invisible at the bottom of its tier's range.
+    const weight = 0.35 + intensity * 0.65;
+    return _mixColors(baseColor, colors.surface, weight);
+  }
+
+  /**
+   * Renders one small dot per student in the given profile, inside the
+   * drill-down sub-state's own mini SVG canvas. Colored by
+   * _riskIntensityColor, with hover tooltips reusing app.js's EXACT
+   * tooltip system (window.riskJourneyTooltip) — same DOM element, same
+   * content format as the roster table rows, not a second tooltip
+   * implementation.
+   *
+   * @param {string} label - Profile label to filter students by
+   */
+  function renderDrilldownDots(label) {
+    const container = document.getElementById("risk-journey-drilldown-canvas");
+    if (!container) return;
+
+    const profileStudents = data.students.filter(
+      (s) => s.risk_profile && s.risk_profile.label === label
+    );
+
+    const dotRadius = 2;
+    const dotSpacing = 8;
+    const margin = 1;
+    const cols = Math.max(6, Math.ceil(Math.sqrt(profileStudents.length * 2)));
+    const rows = Math.ceil(profileStudents.length / cols);
+    const gridWidth = margin * 2 + (cols - 1) * dotSpacing + dotRadius * 2;
+    const gridHeight = margin * 2 + (rows - 1) * dotSpacing + dotRadius * 2;
+
+    const thresholds = { riskThreshold: data.threshold, highCutoff: data.high_risk_cutoff };
+    const colorInputs = {
+      red: _resolveCSSColor("--c-red"),
+      yellow: _resolveCSSColor("--c-yellow"),
+      surface: _resolveCSSColor("--c-bg-surface"),
+    };
+
+    const svgNS = "http://www.w3.org/2000/svg";
+    const drilldownSvg = document.createElementNS(svgNS, "svg");
+    drilldownSvg.setAttribute("viewBox", `0 0 ${gridWidth} ${gridHeight}`);
+    drilldownSvg.setAttribute("role", "img");
+    drilldownSvg.setAttribute(
+      "aria-label",
+      `${profileStudents.length} ${label} students, colored by risk severity`
+    );
+
+    const tooltipApi = window.riskJourneyTooltip;
+
+    profileStudents.forEach((student, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const cx = margin + dotRadius + col * dotSpacing;
+      const cy = margin + dotRadius + row * dotSpacing;
+
+      const dot = document.createElementNS(svgNS, "circle");
+      dot.setAttribute("cx", cx);
+      dot.setAttribute("cy", cy);
+      dot.setAttribute("r", dotRadius);
+      dot.setAttribute("fill", _riskIntensityColor(student, thresholds, colorInputs));
+      dot.setAttribute("class", "risk-journey__drilldown-dot");
+
+      if (tooltipApi) {
+        const content = tooltipApi.buildContent(student);
+        dot.addEventListener("mouseenter", (e) => tooltipApi.show(e, content));
+        dot.addEventListener("mousemove", (e) => tooltipApi.move(e));
+        dot.addEventListener("mouseleave", () => tooltipApi.hide());
+      }
+
+      drilldownSvg.appendChild(dot);
+    });
+
+    container.innerHTML = "";
+    container.appendChild(drilldownSvg);
+  }
+
+  /** Switches the detail card from the overview sub-state to the drill-down. */
+  function showDrilldown(label) {
+    const overview = document.getElementById("risk-journey-detail-overview");
+    const drilldown = document.getElementById("risk-journey-detail-drilldown");
+    const drilldownNameEl = document.getElementById("risk-journey-drilldown-name");
+
+    if (drilldownNameEl) drilldownNameEl.textContent = label;
+    renderDrilldownDots(label);
+
+    if (overview) overview.hidden = true;
+    if (drilldown) drilldown.hidden = false;
+  }
+
+  /** Switches the detail card back to the overview (strategy) sub-state. */
+  function showOverview() {
+    const overview = document.getElementById("risk-journey-detail-overview");
+    const drilldown = document.getElementById("risk-journey-detail-drilldown");
+    if (overview) overview.hidden = false;
+    if (drilldown) drilldown.hidden = true;
+  }
+
   function resetProfileSelection() {
     if (!selectedProfile) return;
+
+    // Always reset to the overview sub-state when the card closes —
+    // without this, selecting a DIFFERENT profile next time would jump
+    // straight back into a stale drill-down view (the wrong profile's,
+    // since renderDrilldownDots hasn't run for the new selection yet)
+    // instead of starting fresh at the strategy overview.
+    showOverview();
 
     Object.keys(PROFILE_CENTROID_FRACS).forEach((label) => {
       const centroid = profileCentroids[label];
@@ -884,6 +1043,9 @@ function initStepNavigation(dotsGroup, circles, data) {
 
   /** Focuses one profile: fades its bubble out, repositions the other two. */
   function selectProfile(label) {
+    //Make sure it shows the overview first, in case the user had previously drilled down into a different profile.
+    showOverview();
+    
     selectedProfile = label;
 
     // The selected bubble fades away entirely rather than moving and
@@ -1073,8 +1235,10 @@ function initStepNavigation(dotsGroup, circles, data) {
         // Release the lock before bailing out — without this, an invalid
         // step number would leave isTransitioning stuck true forever and
         // permanently freeze all navigation.
-        isTransitioning = false;
+
         _setStepButtonsEnabled(true);
+        isTransitioning = false;
+
         return;
     }
 
@@ -1109,6 +1273,12 @@ function initStepNavigation(dotsGroup, circles, data) {
     });
   });
 
+  // "Watch again" — identical effect to clicking progress step 1.
+  const watchAgainBtn = document.getElementById("risk-journey-watch-again");
+  if (watchAgainBtn) {
+    watchAgainBtn.addEventListener("click", () => goToStep(1));
+  }
+
   // Step 5's resolved-circle click interaction.
   Object.keys(resolvedCircles).forEach((label) => {
     resolvedCircles[label].addEventListener("click", () => {
@@ -1120,16 +1290,22 @@ function initStepNavigation(dotsGroup, circles, data) {
     });
   });
 
+  // Drill-down close button (✕) — returns to the 3-bubble view, closing the card entirely.
   const backBtn = document.getElementById("risk-journey-detail-back");
   if (backBtn) backBtn.addEventListener("click", resetProfileSelection);
 
   const ctaBtn = document.getElementById("risk-journey-detail-cta");
   if (ctaBtn) {
     ctaBtn.addEventListener("click", () => {
-      // Phase 8 hook — student-level drill-down not yet built.
-      console.log("[riskJourney] See detailed data clicked for:", selectedProfile);
+      if (selectedProfile) showDrilldown(selectedProfile);
     });
   }
+
+  // Drill-down's own back button — returns to the overview (strategy)
+  // sub-state WITHOUT closing the card entirely. Distinct from backBtn
+  // above (the ✕), which closes the whole card back to the 3-bubble view.
+  const drilldownBackBtn = document.getElementById("risk-journey-drilldown-back");
+  if (drilldownBackBtn) drilldownBackBtn.addEventListener("click", showOverview);
 
   // Initialize the progress bar to reflect Step 1 — no tween needed
   // here, since animateEntranceOnLoad already established Step 1's

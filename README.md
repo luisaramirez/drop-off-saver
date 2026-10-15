@@ -246,12 +246,13 @@ This is a summary of the changes. For more specific information, please refer to
 
 **Version 3:** A profiling layer was added to the program's logic, to cluster at-risk students into actionable intervention groups with custom retention plans.
 
-**Version 4:** Storytelling was corrected to prioritize navigation ease and readability for users. Moved from scroll-driven to progress bar buttons, we iterated until finding the simplest way to represent this amount of data visually.
+**Version 4:** The storytelling experience was refined to emphasize navigation ease and readability for users. Transitioned from scroll-driven format to progress bar navigation and iterated throughout this process to identify the most user-friendly way to represent a large volume of information.
 
 ---
 
 ## Learning summary
 
+- It is a must to develop the first prompt thinking of a usable MVP, this will allow faster modifications and improvement of the product.
 - AI efforts must be better utilized, prompts must be refined so human intervention focuses on improving the product in terms of usability.
 - Future projects must be developed mobile-first.
 - The less vague and more detailed the Prompts are about layout, color scheme, usability, and site architecture, the better. This practice will leave less room for randomness and AI decision making on choices that affect user interaction and that can have a negative impact on the final product.

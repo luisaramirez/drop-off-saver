@@ -12,58 +12,75 @@
 /* ── Tokens ─────────────────────────────────────────────── */
 :root {
   /* Palette */
-  --c-bg:           #0c0d0f;
-  --c-bg-surface:   #141518;
-  --c-bg-elevated:  #1c1e22;
-  --c-border:       #282a30;
+  --c-bg: #0c0d0f;
+  --c-bg-surface: #141518;
+  --c-bg-elevated: #1c1e22;
+  --c-border: #282a30;
 
-  --c-amber:        #f5a623;       /* Primary signal / HIGH risk */
-  --c-amber-dim:    #9a6614;
-  --c-amber-glow:   rgba(245, 166, 35, 0.12);
+  --c-amber: #f5a623;
+  /* Primary signal / HIGH risk */
+  --c-amber-dim: #9a6614;
+  --c-amber-glow: rgba(245, 166, 35, 0.12);
 
-  --c-red:          #e8453c;       /* HIGH risk label */
-  --c-yellow:       #f5c842;       /* MEDIUM risk label */
-  --c-green:        #3ecf8e;       /* Safe / PASS */
+  --c-red: #e8453c;
+  /* HIGH risk label */
+  --c-yellow: #f5c842;
+  /* MEDIUM risk label */
+  --c-green: #3ecf8e;
+  /* Safe / PASS */
 
   /* Risk profile accents — deliberately distinct hues from the risk-tier
      palette above (red/yellow/green) so profile and tier read as two
      separate dimensions, not a duplicate color-coding of the same thing. */
-  --c-violet:       #9b8cf2;       /* Time-Constrained */
-  --c-cyan:         #5ec9e8;       /* Disengaged Learner */
-  --c-rose:         #f28cb8;       /* Quiet Decliner */
+  --c-violet: #9b8cf2;
+  /* Time-Constrained */
+  --c-cyan: #5ec9e8;
+  /* Disengaged Learner */
+  --c-rose: #f28cb8;
+  /* Quiet Decliner */
 
   --c-text-primary: #f0f1f3;
   --c-text-secondary: #8a8f9a;
-  --c-text-muted:   #4a4f5a;
+  --c-text-muted: #4a4f5a;
 
   /* Type */
-  --font-display:  'Space Grotesk', system-ui, sans-serif;
-  --font-mono:     'Space Mono', 'Courier New', monospace;
-  --font-body:     'Space Grotesk', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'Space Mono', 'Courier New', monospace;
+  --font-body: 'Space Grotesk', system-ui, sans-serif;
 
   /* Scale */
-  --text-xs:    0.75rem;
-  --text-sm:    0.875rem;
-  --text-base:  1rem;
-  --text-lg:    1.125rem;
-  --text-xl:    1.375rem;
-  --text-2xl:   1.75rem;
-  --text-3xl:   2.25rem;
-  --text-4xl:   3rem;
-  --text-5xl:   4rem;
-  --text-hero:  clamp(3rem, 8vw, 7rem);
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-4xl: 3rem;
+  --text-5xl: 4rem;
+  --text-hero: clamp(3rem, 8vw, 7rem);
 
   /* Spacing */
   --space-section: clamp(5rem, 10vh, 8rem);
 
   /* Motion */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-expo:  cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-expo: cubic-bezier(0.7, 0, 0.84, 0);
 }
 
 /* ── Reset ───────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; font-size: 16px; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
 
 body {
   background-color: var(--c-bg);
@@ -76,7 +93,10 @@ body {
 }
 
 /* ── Utilities ───────────────────────────────────────────── */
-.reveal-text { opacity: 0; transform: translateY(2rem); }
+.reveal-text {
+  opacity: 0;
+  transform: translateY(2rem);
+}
 
 /* ── Sections ────────────────────────────────────────────── */
 .section {
@@ -121,7 +141,10 @@ body {
   line-height: 1.7;
 }
 
-.section__body strong { color: var(--c-text-primary); font-weight: 600; }
+.section__body strong {
+  color: var(--c-text-primary);
+  font-weight: 600;
+}
 
 
 /* ═══════════════════════════════════════════════════════════
@@ -139,13 +162,9 @@ body {
 .risk-journey__completion {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 3rem;
   opacity: 0;
-
-  position: absolute;
-  width: 50%;
-  bottom: 30%;
-  right: 0%;
 }
 
 .risk-journey__completion span {
@@ -155,6 +174,26 @@ body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
+
+.risk-journey__watch-again {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.risk-journey__watch-again:hover {
+  border-color: var(--c-amber-dim);
+  color: var(--c-amber);
+}
+
 
 /* ═══════════════════════════════════════════════════════════
    RISK JOURNEY PROGRESS BAR
@@ -239,6 +278,7 @@ body {
   border-color: var(--c-amber-dim);
   color: var(--c-text-primary);
 }
+
 .risk-journey__progress-step:hover .risk-journey__progress-step-label {
   color: var(--c-text-primary);
 }
@@ -252,10 +292,12 @@ body {
 .risk-journey__progress-step--locked {
   cursor: not-allowed;
 }
+
 .risk-journey__progress-step--locked:hover .risk-journey__progress-step-number {
   border-color: var(--c-border);
   color: var(--c-text-muted);
 }
+
 .risk-journey__progress-step--locked:hover .risk-journey__progress-step-label {
   color: var(--c-text-muted);
 }
@@ -266,6 +308,7 @@ body {
   /* background: var(--c-amber-glow); */
   transform: scale(1.15);
 }
+
 .risk-journey__progress-step--active .risk-journey__progress-step-label {
   color: var(--c-amber);
 }
@@ -275,14 +318,16 @@ body {
   color: var(--c-text-primary);
   background: var(--c-bg-elevated);
 }
+
 .risk-journey__progress-step--complete .risk-journey__progress-step-label {
   color: var(--c-text-secondary);
 }
 
 @media (max-width: 900px) {
-  .section--risk-journey{
+  .section--risk-journey {
     flex-direction: column-reverse !important;
   }
+
   .risk-journey__progress {
     top: 10%;
     display: flex;
@@ -292,35 +337,29 @@ body {
     justify-content: center;
     z-index: 20;
     gap: 1rem;
-}
+  }
 
-.risk-journey__progress-step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  text-align: center;
-}
+  .risk-journey__progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
+  }
 
-.risk-journey__progress-track {
-  transform: rotate(270deg);
-  top: 15px;
-  left: 74px;
-  bottom: 0px;
-  height: 470px;
-  -webkit-transform-origin-y: top;
-  transform: rotate(270deg);
-}
+  .risk-journey__progress-track {
+    transform: rotate(270deg);
+    top: 15px;
+    left: 74px;
+    bottom: 0px;
+    height: 470px;
+    -webkit-transform-origin-y: top;
+    transform: rotate(270deg);
+  }
 
-.risk-journey__copy-stack {
-  width: 100% !important;
-}
-
-.risk-journey__completion {
-    width: 100%;
-    bottom: 17%;
-}
-
+  .risk-journey__copy-stack {
+    width: 100% !important;
+  }
 }
 
 
@@ -405,9 +444,17 @@ body {
   flex-shrink: 0;
 }
 
-.legend__dot--high   { background: var(--c-red); }
-.legend__dot--medium { background: var(--c-yellow); }
-.legend__dot--safe   { background: var(--c-green); }
+.legend__dot--high {
+  background: var(--c-red);
+}
+
+.legend__dot--medium {
+  background: var(--c-yellow);
+}
+
+.legend__dot--safe {
+  background: var(--c-green);
+}
 
 
 /* Profile legend — reused by the "demographics" Risk Journey panel.
@@ -415,7 +462,7 @@ body {
    vertical room per row than the compact risk legend above. */
 .profile-legend {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 1.25rem;
   margin-top: 1.5rem;
 }
@@ -434,9 +481,17 @@ body {
   margin-top: 0.4rem;
 }
 
-.profile-legend__dot--time-constrained { background: var(--c-violet); }
-.profile-legend__dot--disengaged       { background: var(--c-cyan); }
-.profile-legend__dot--quiet-decliner   { background: var(--c-rose); }
+.profile-legend__dot--time-constrained {
+  background: var(--c-violet);
+}
+
+.profile-legend__dot--disengaged {
+  background: var(--c-cyan);
+}
+
+.profile-legend__dot--quiet-decliner {
+  background: var(--c-rose);
+}
 
 .profile-legend__item strong {
   display: block;
@@ -473,10 +528,16 @@ body {
    one write, three consumers, impossible for them to disagree.
 ════════════════════════════════════════════════════════════ */
 .risk-journey__detail-card {
-  position: absolute;
+  position: relative;
+  grid-area: 1 / 1;
+
+  width: 100%;
   max-width: 60ch;
-  right: 0%;
-  top: 30%;
+  max-height: fit-content;
+
+  right: 0px;
+  top: 160px;
+
   background: var(--c-bg-surface);
   border: 1px solid var(--c-border);
   border-radius: 14px;
@@ -571,7 +632,7 @@ body {
 }
 
 .risk-journey__detail-strategy-text {
-  font-size: var(--text-xs);
+  font-size: var(--text-base);
   color: var(--c-text-secondary);
   line-height: 1.6;
 }
@@ -595,11 +656,72 @@ body {
   transform: translateY(-1px);
 }
 
+.risk-journey__drilldown-text {
+  font-size: var(--text-sm);
+  color: var(--c-text-secondary);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.risk-journey__drilldown-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-bottom: 1rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.risk-journey__drilldown-back:hover {
+  color: var(--profile-accent-color, var(--c-amber));
+}
+
+.risk-journey__drilldown-canvas {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.risk-journey__drilldown-canvas svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+/* Individual fill color is set per-dot in JS (risk-tier color mixed
+   with the surface color, weighted by that student's score WITHIN
+   their tier — see _riskIntensityColor in riskJourney.js), never here —
+   this rule only covers what's shared across every dot regardless of
+   its color. transform-box:fill-box is required for the hover scale to
+   grow from each circle's own center rather than the SVG's (0,0)
+   origin, which is the default and wrong point for a small dot far
+   from the corner. */
+.risk-journey__drilldown-dot {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.risk-journey__drilldown-dot:hover {
+  transform: scale(1.5);
+}
+
 
 /* ═══════════════════════════════════════════════════════════
    ROSTER TABLE
 ════════════════════════════════════════════════════════════ */
-.section--roster { background-color: var(--c-bg); }
+.section--roster {
+  background-color: var(--c-bg);
+}
 
 .roster__controls {
   display: flex;
@@ -630,16 +752,43 @@ body {
   transition: all 0.15s ease;
 }
 
-.filter-btn:hover            { border-color: var(--c-amber-dim); color: var(--c-amber); }
-.filter-btn--active          { background: var(--c-amber-glow); border-color: var(--c-amber-dim); color: var(--c-amber); }
-.filter-btn--high:hover      { border-color: var(--c-red); color: var(--c-red); }
-.filter-btn--medium:hover    { border-color: var(--c-yellow); color: var(--c-yellow); }
+.filter-btn:hover {
+  border-color: var(--c-amber-dim);
+  color: var(--c-amber);
+}
+
+.filter-btn--active {
+  background: var(--c-amber-glow);
+  border-color: var(--c-amber-dim);
+  color: var(--c-amber);
+}
+
+.filter-btn--high:hover {
+  border-color: var(--c-red);
+  color: var(--c-red);
+}
+
+.filter-btn--medium:hover {
+  border-color: var(--c-yellow);
+  color: var(--c-yellow);
+}
 
 /* Profile filter buttons get their own hover colors matching the badge
    palette, so the filter group visually previews what it will show. */
-.filter-btn--time-constrained:hover { border-color: var(--c-violet); color: var(--c-violet); }
-.filter-btn--disengaged:hover       { border-color: var(--c-cyan); color: var(--c-cyan); }
-.filter-btn--quiet-decliner:hover   { border-color: var(--c-rose); color: var(--c-rose); }
+.filter-btn--time-constrained:hover {
+  border-color: var(--c-violet);
+  color: var(--c-violet);
+}
+
+.filter-btn--disengaged:hover {
+  border-color: var(--c-cyan);
+  color: var(--c-cyan);
+}
+
+.filter-btn--quiet-decliner:hover {
+  border-color: var(--c-rose);
+  color: var(--c-rose);
+}
 
 .roster__count {
   font-family: var(--font-mono);
@@ -685,7 +834,9 @@ body {
   color: var(--c-text-secondary);
 }
 
-.roster__table tbody tr:last-child td { border-bottom: none; }
+.roster__table tbody tr:last-child td {
+  border-bottom: none;
+}
 
 .roster__table tbody tr {
   transition: background 0.15s ease;
@@ -693,7 +844,9 @@ body {
   transform: translateX(-1rem);
 }
 
-.roster__table tbody tr:hover { background: var(--c-bg-elevated); }
+.roster__table tbody tr:hover {
+  background: var(--c-bg-elevated);
+}
 
 .user-id {
   font-family: var(--font-mono);
@@ -706,9 +859,17 @@ body {
   font-weight: 700;
 }
 
-.risk-score--high   { color: var(--c-red); }
-.risk-score--medium { color: var(--c-yellow); }
-.risk-score--low    { color: var(--c-green); }
+.risk-score--high {
+  color: var(--c-red);
+}
+
+.risk-score--medium {
+  color: var(--c-yellow);
+}
+
+.risk-score--low {
+  color: var(--c-green);
+}
 
 .risk-badge {
   display: inline-block;
@@ -721,9 +882,20 @@ body {
   font-weight: 700;
 }
 
-.risk-badge--HIGH   { background: rgba(232, 69, 60, 0.15); color: var(--c-red); }
-.risk-badge--MEDIUM { background: rgba(245, 200, 66, 0.15); color: var(--c-yellow); }
-.risk-badge--LOW    { background: rgba(62, 207, 142, 0.12); color: var(--c-green); }
+.risk-badge--HIGH {
+  background: rgba(232, 69, 60, 0.15);
+  color: var(--c-red);
+}
+
+.risk-badge--MEDIUM {
+  background: rgba(245, 200, 66, 0.15);
+  color: var(--c-yellow);
+}
+
+.risk-badge--LOW {
+  background: rgba(62, 207, 142, 0.12);
+  color: var(--c-green);
+}
 
 .action-text {
   font-size: var(--text-xs);
@@ -745,10 +917,25 @@ body {
   white-space: nowrap;
 }
 
-.profile-badge--time-constrained { background: rgba(155, 140, 242, 0.15); color: var(--c-violet); }
-.profile-badge--disengaged       { background: rgba(94, 201, 232, 0.15);  color: var(--c-cyan); }
-.profile-badge--quiet-decliner   { background: rgba(242, 140, 184, 0.15); color: var(--c-rose); }
-.profile-badge--default          { background: rgba(138, 143, 154, 0.15); color: var(--c-text-muted); }
+.profile-badge--time-constrained {
+  background: rgba(155, 140, 242, 0.15);
+  color: var(--c-violet);
+}
+
+.profile-badge--disengaged {
+  background: rgba(94, 201, 232, 0.15);
+  color: var(--c-cyan);
+}
+
+.profile-badge--quiet-decliner {
+  background: rgba(242, 140, 184, 0.15);
+  color: var(--c-rose);
+}
+
+.profile-badge--default {
+  background: rgba(138, 143, 154, 0.15);
+  color: var(--c-text-muted);
+}
 
 
 /* ═══════════════════════════════════════════════════════════
@@ -765,9 +952,9 @@ body {
 }
 
 .risk-journey__layout {
-  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
+  grid-auto-rows: auto;
   gap: 3rem;
   align-items: center;
   min-height: 70vh;
@@ -778,9 +965,8 @@ body {
      (grid-area: 1 / 1 on each, below), so they overlap exactly without
      manual position:absolute/top/left math, and the container sizes
      itself to whichever panel is currently tallest. GSAP crossfades
-     opacity between them — see riskJourney.js. */
+     visibility between them — see riskJourney.js. */
   display: grid;
-  max-width: 44ch;
 }
 
 .risk-journey__copy-panel {
@@ -792,18 +978,45 @@ body {
    intro panel only, keep the other four hidden. A single non-animated
    intro panel is a sensible degraded state; five overlapping panels
    all fully visible would read as broken, garbled text. */
-#risk-journey-intro { opacity: 1; }
-#risk-journey-signal { opacity: 0; }
-#risk-journey-thresholds { opacity: 0; }
-#risk-journey-profiling { opacity: 0; }
-#risk-journey-demographics { opacity: 0; }
-#risk-journey-detail { opacity: 0; z-index:1000; pointer-events: none; }
+#risk-journey-intro {
+  display: block;
+}
+
+#risk-journey-signal {
+  display: none;
+}
+
+#risk-journey-thresholds {
+  display: none;
+}
+
+#risk-journey-profiling {
+  display: none;
+}
+
+#risk-journey-demographics {
+  display: none;
+}
+
+#risk-journey-detail {
+  /* visibility: hidden; */
+  opacity: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.risk-journey__dynamic_graphs {
+  display: grid;
+  grid-template-columns: 1fr;
+}
 
 .risk-journey__canvas {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+
+  grid-area: 1 / 1;
 }
 
 .risk-journey__svg {
@@ -832,9 +1045,17 @@ body {
    introducing new colors, so this reads as one consistent risk language
    across the whole site, not a separate palette invented for this one
    visualization. */
-.risk-journey__dot[data-risk-label="HIGH"]   { fill: var(--c-red); }
-.risk-journey__dot[data-risk-label="MEDIUM"] { fill: var(--c-yellow); }
-.risk-journey__dot[data-risk-label="LOW"]    { fill: var(--c-green); }
+.risk-journey__dot[data-risk-label="HIGH"] {
+  fill: var(--c-red);
+}
+
+.risk-journey__dot[data-risk-label="MEDIUM"] {
+  fill: var(--c-yellow);
+}
+
+.risk-journey__dot[data-risk-label="LOW"] {
+  fill: var(--c-green);
+}
 
 /* Cluster labels (count + profile name) that fade in above each blob
    during the "profiles" segment of animateMainSequence. Two tspans per
@@ -886,18 +1107,47 @@ body {
 
 @media (max-width: 900px) {
   .risk-journey__layout {
+    /* grid-template-columns: 1fr;
+    gap: 2rem; */
+
     grid-template-columns: 1fr;
-    gap: 2rem;
+    transition: grid-template-rows 0.3s ease-in-out;
+    height: fit-content;
+    grid-auto-rows: auto;
   }
-  .system-flow { flex-direction: column; }
-  .system-connector { transform: rotate(90deg); margin: 0.25rem 0; }
+
+  .system-flow {
+    flex-direction: column;
+  }
+
+  .system-connector {
+    transform: rotate(90deg);
+    margin: 0.25rem 0;
+  }
+}
+
+@media (max-width: 620px) {
+  .risk-journey__progress-step {
+    width: 60px;
+  }
+
+  .risk-journey__progress-step-label {
+    text-wrap: balance;
+  }
+
+  .risk-journey__progress-track {
+    left: 145px;
+    height: 300px;
+  }
 }
 
 
 /* ═══════════════════════════════════════════════════════════
    SYSTEM FLOW
 ════════════════════════════════════════════════════════════ */
-.section--system { background-color: var(--c-bg-surface); }
+.section--system {
+  background-color: var(--c-bg-surface);
+}
 
 .system-flow {
   display: flex;
@@ -1014,7 +1264,9 @@ body {
   transition: opacity 0.15s ease;
 }
 
-.tooltip[aria-hidden="false"] { opacity: 1; }
+.tooltip[aria-hidden="false"] {
+  opacity: 1;
+}
 
 .tooltip__inner {
   background: var(--c-bg-elevated);
@@ -1027,7 +1279,7 @@ body {
   max-width: 240px;
   line-height: 1.6;
   white-space: pre-line;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 
@@ -1040,9 +1292,21 @@ body {
    REDUCED MOTION
 ════════════════════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
-  .scroll-cue__line { animation: none; }
-  .reveal-text, .system-node, .roster__table tbody tr {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .scroll-cue__line {
+    animation: none;
+  }
+
+  .reveal-text,
+  .system-node,
+  .roster__table tbody tr {
     opacity: 1 !important;
     transform: none !important;
   }
