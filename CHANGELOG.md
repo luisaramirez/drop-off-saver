@@ -56,3 +56,4 @@ The goal is to use visual elements/shapes to represent students and the data we 
   - Scrolling replaced by progress-bar buttons to allow a smoother interaction between the process steps.
   - Re-arrangement of the risk profiles screen information to improve readability and user's feedback.
   - Error handling of overlapping areas across the whole interaction.
+  - Mobile layout polished.
