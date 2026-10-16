@@ -12,58 +12,75 @@
 /* ── Tokens ─────────────────────────────────────────────── */
 :root {
   /* Palette */
-  --c-bg:           #0c0d0f;
-  --c-bg-surface:   #141518;
-  --c-bg-elevated:  #1c1e22;
-  --c-border:       #282a30;
+  --c-bg: #0c0d0f;
+  --c-bg-surface: #141518;
+  --c-bg-elevated: #1c1e22;
+  --c-border: #282a30;
 
-  --c-amber:        #f5a623;       /* Primary signal / HIGH risk */
-  --c-amber-dim:    #9a6614;
-  --c-amber-glow:   rgba(245, 166, 35, 0.12);
+  --c-amber: #f5a623;
+  /* Primary signal / HIGH risk */
+  --c-amber-dim: #9a6614;
+  --c-amber-glow: rgba(245, 166, 35, 0.12);
 
-  --c-red:          #e8453c;       /* HIGH risk label */
-  --c-yellow:       #f5c842;       /* MEDIUM risk label */
-  --c-green:        #3ecf8e;       /* Safe / PASS */
+  --c-red: #e8453c;
+  /* HIGH risk label */
+  --c-yellow: #f5c842;
+  /* MEDIUM risk label */
+  --c-green: #3ecf8e;
+  /* Safe / PASS */
 
   /* Risk profile accents — deliberately distinct hues from the risk-tier
      palette above (red/yellow/green) so profile and tier read as two
      separate dimensions, not a duplicate color-coding of the same thing. */
-  --c-violet:       #9b8cf2;       /* Time-Constrained */
-  --c-cyan:         #5ec9e8;       /* Disengaged Learner */
-  --c-rose:         #f28cb8;       /* Quiet Decliner */
+  --c-violet: #9b8cf2;
+  /* Time-Constrained */
+  --c-cyan: #5ec9e8;
+  /* Disengaged Learner */
+  --c-rose: #f28cb8;
+  /* Quiet Decliner */
 
   --c-text-primary: #f0f1f3;
   --c-text-secondary: #8a8f9a;
-  --c-text-muted:   #4a4f5a;
+  --c-text-muted: #4a4f5a;
 
   /* Type */
-  --font-display:  'Space Grotesk', system-ui, sans-serif;
-  --font-mono:     'Space Mono', 'Courier New', monospace;
-  --font-body:     'Space Grotesk', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'Space Mono', 'Courier New', monospace;
+  --font-body: 'Space Grotesk', system-ui, sans-serif;
 
   /* Scale */
-  --text-xs:    0.75rem;
-  --text-sm:    0.875rem;
-  --text-base:  1rem;
-  --text-lg:    1.125rem;
-  --text-xl:    1.375rem;
-  --text-2xl:   1.75rem;
-  --text-3xl:   2.25rem;
-  --text-4xl:   3rem;
-  --text-5xl:   4rem;
-  --text-hero:  clamp(3rem, 8vw, 7rem);
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-4xl: 3rem;
+  --text-5xl: 4rem;
+  --text-hero: clamp(3rem, 8vw, 7rem);
 
   /* Spacing */
   --space-section: clamp(5rem, 10vh, 8rem);
 
   /* Motion */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-expo:  cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-expo: cubic-bezier(0.7, 0, 0.84, 0);
 }
 
 /* ── Reset ───────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; font-size: 16px; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
 
 body {
   background-color: var(--c-bg);
@@ -76,14 +93,17 @@ body {
 }
 
 /* ── Utilities ───────────────────────────────────────────── */
-.reveal-text { opacity: 0; transform: translateY(2rem); }
+.reveal-text {
+  opacity: 0;
+  transform: translateY(2rem);
+}
 
 /* ── Sections ────────────────────────────────────────────── */
 .section {
   min-height: 100vh;
   display: flex;
   align-items: center;
-  padding: var(--space-section) max(2rem, 5vw);
+  padding: var(--space-section) max(2rem, 3vw);
 }
 
 .section__inner {
@@ -92,12 +112,6 @@ body {
   width: 100%;
 }
 
-.section__inner--split {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4rem;
-  align-items: center;
-}
 
 .section__label {
   font-family: var(--font-mono);
@@ -127,138 +141,33 @@ body {
   line-height: 1.7;
 }
 
-.section__body strong { color: var(--c-text-primary); font-weight: 600; }
+.section__body strong {
+  color: var(--c-text-primary);
+  font-weight: 600;
+}
 
 
 /* ═══════════════════════════════════════════════════════════
-   HERO
+   RISK JOURNEY SCROLL CUE
+   Reuses .scroll-cue__line / @keyframes scroll-cue-pulse below,
+   originally written for the now-removed hero section — kept because
+   this is the same visual cue, just relocated.
 ════════════════════════════════════════════════════════════ */
-.section--hero {
-  position: relative;
-  min-height: 100vh;
-  justify-content: center;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* Scan-line grid — the "signature" element */
-.hero__bg-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(245, 166, 35, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(245, 166, 35, 0.04) 1px, transparent 1px);
-  background-size: 40px 40px;
-  mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 40%, transparent 100%);
-  pointer-events: none;
-}
-
-.hero__content {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 max(2rem, 5vw);
-  text-align: left;
-  position: relative;
-  z-index: 1;
-}
-
-.hero__eyebrow {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--c-amber);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  margin-bottom: 1.75rem;
-  opacity: 0;
-}
-
-.hero__headline {
-  font-family: var(--font-display);
-  font-size: var(--text-hero);
-  font-weight: 700;
-  line-height: 1.0;
-  letter-spacing: -0.03em;
-  margin-bottom: 2rem;
-  display: block;
-}
-
-.hero__headline-line {
-  display: block;
-  overflow: hidden;
-}
-
-.hero__headline-line--accent {
-  color: var(--c-amber);
-}
-
-.hero__subhead {
-  font-size: var(--text-xl);
-  color: var(--c-text-secondary);
-  max-width: 55ch;
-  line-height: 1.65;
-  margin-bottom: 3.5rem;
-  opacity: 0;
-}
-
-/* Stat cluster */
-.hero__stat-cluster {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 4rem;
-}
-
-.stat-card {
-  background: var(--c-bg-surface);
-  border: 1px solid var(--c-border);
-  border-radius: 8px;
-  padding: 1.25rem 1.75rem;
-  min-width: 160px;
-  transition: border-color 0.2s ease, transform 0.2s ease;
-}
-
-.stat-card--loading { opacity: 0.4; }
-.stat-card--loaded  { opacity: 1; transition: opacity 0.4s ease; }
-
-.stat-card--danger {
-  border-color: var(--c-amber-dim);
-  background: var(--c-amber-glow);
-}
-
-.stat-card:hover {
-  border-color: var(--c-amber-dim);
-  transform: translateY(-2px);
-}
-
-.stat-card__value {
-  display: block;
-  font-family: var(--font-display);
-  font-size: var(--text-3xl);
-  font-weight: 700;
-  line-height: 1;
-  margin-bottom: 0.4rem;
-  letter-spacing: -0.03em;
-}
-
-.stat-card--danger .stat-card__value { color: var(--c-amber); }
-
-.stat-card__label {
-  display: block;
-  font-size: var(--text-xs);
-  color: var(--c-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-/* Scroll cue */
-.hero__scroll-cue {
+/* ═══════════════════════════════════════════════════════════
+   RISK JOURNEY COMPLETION BAR
+   Shown while at Step 5 (via riskJourney.js:goToStep(5)) — hidden
+   whenever any other step is active. "Watch again" is a shortcut with
+   the exact same effect as clicking progress step 1.
+════════════════════════════════════════════════════════════ */
+.risk-journey__completion {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
+  margin-top: 3rem;
   opacity: 0;
 }
 
-.hero__scroll-cue span {
+.risk-journey__completion span {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--c-text-muted);
@@ -266,102 +175,253 @@ body {
   text-transform: uppercase;
 }
 
-.scroll-cue__line {
-  width: 48px;
-  height: 1px;
-  background: var(--c-text-muted);
-  transform-origin: left;
-  animation: scroll-cue-pulse 2s ease-in-out infinite;
+.risk-journey__watch-again {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-@keyframes scroll-cue-pulse {
-  0%, 100% { opacity: 0.3; transform: scaleX(1); }
-  50%       { opacity: 1;   transform: scaleX(1.4); }
+.risk-journey__watch-again:hover {
+  border-color: var(--c-amber-dim);
+  color: var(--c-amber);
 }
 
 
 /* ═══════════════════════════════════════════════════════════
-   SIGNAL CARDS
+   RISK JOURNEY PROGRESS BAR
+   Fixed to the viewport's left edge (not the section — a section child
+   with position:fixed still positions relative to the viewport, but is
+   kept as a section child so it never needs its own boot/teardown
+   logic; it simply lives and dies with the section). Current step is
+   driven by riskJourney.js reading the shared timeline's own progress —
+   see updateProgressBar(). Hidden below 768px for now (Phase 9 mobile
+   pass will revisit; a fixed-left sidebar has nowhere good to go on a
+   narrow viewport without redesigning the whole layout).
 ════════════════════════════════════════════════════════════ */
-.section--signal { background-color: var(--c-bg); }
-
-.signal-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+.risk-journey__progress {
+  position: relative;
+  left: 0px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 1.5rem;
-  margin-top: 3rem;
+  z-index: 20;
 }
 
-.signal-card {
+.risk-journey__progress-track {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 14px;
+  width: 2px;
+  background: var(--c-border);
+  overflow: hidden;
+  z-index: -1;
+}
+
+.risk-journey__progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 0%;
+  background: var(--c-amber);
+}
+
+.risk-journey__progress-step {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.risk-journey__progress-step-number {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
   background: var(--c-bg-surface);
-  border: 1px solid var(--c-border);
-  border-radius: 10px;
-  padding: 2rem 1.75rem;
-  opacity: 0;
-  transform: translateY(2rem);
-  transition: border-color 0.3s ease;
-}
-
-.signal-card:hover { border-color: var(--c-amber-dim); }
-
-.signal-card__icon {
-  width: 40px;
-  height: 40px;
-  color: var(--c-amber);
-  margin-bottom: 1.25rem;
-}
-
-.signal-card__title {
-  font-size: var(--text-lg);
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-  letter-spacing: -0.01em;
-}
-
-.signal-card__body {
-  font-size: var(--text-sm);
-  color: var(--c-text-secondary);
-  line-height: 1.65;
-  margin-bottom: 1.5rem;
-}
-
-.signal-card__weight { }
-
-.signal-card__weight-label {
-  display: block;
+  border: 2px solid var(--c-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--c-text-muted);
-  margin-bottom: 0.5rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  transition: border-color 0.3s ease, color 0.3s ease, background 0.3s ease, transform 0.3s ease;
 }
 
-.signal-card__weight-bar {
+.risk-journey__progress-step-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+  transition: color 0.3s ease;
+}
+
+.risk-journey__progress-step:hover .risk-journey__progress-step-number {
+  border-color: var(--c-amber-dim);
+  color: var(--c-text-primary);
+}
+
+.risk-journey__progress-step:hover .risk-journey__progress-step-label {
+  color: var(--c-text-primary);
+}
+
+/* Applied by riskJourney.js:_setStepButtonsEnabled() while a step
+   transition is mid-flight. The buttons also get the real `disabled`
+   property set, so this is purely the visual signal — clicking is
+   already blocked by the browser at that point. Hover styles are
+   suppressed here so a locked button doesn't falsely appear
+   interactive. */
+.risk-journey__progress-step--locked {
+  cursor: not-allowed;
+}
+
+.risk-journey__progress-step--locked:hover .risk-journey__progress-step-number {
+  border-color: var(--c-border);
+  color: var(--c-text-muted);
+}
+
+.risk-journey__progress-step--locked:hover .risk-journey__progress-step-label {
+  color: var(--c-text-muted);
+}
+
+.risk-journey__progress-step--active .risk-journey__progress-step-number {
+  border-color: var(--c-amber);
+  color: var(--c-amber);
+  /* background: var(--c-amber-glow); */
+  transform: scale(1.15);
+}
+
+.risk-journey__progress-step--active .risk-journey__progress-step-label {
+  color: var(--c-amber);
+}
+
+.risk-journey__progress-step--complete .risk-journey__progress-step-number {
+  border-color: var(--c-amber-dim);
+  color: var(--c-text-primary);
+  background: var(--c-bg-elevated);
+}
+
+.risk-journey__progress-step--complete .risk-journey__progress-step-label {
+  color: var(--c-text-secondary);
+}
+
+@media (max-width: 900px) {
+  .section--risk-journey {
+    flex-direction: column-reverse !important;
+  }
+
+  .risk-journey__progress {
+    top: 10%;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    width: 600px;
+    justify-content: center;
+    z-index: 20;
+    gap: 1rem;
+  }
+
+  .risk-journey__progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
+  }
+
+  .risk-journey__progress-track {
+    transform: rotate(270deg);
+    top: 15px;
+    left: 74px;
+    bottom: 0px;
+    height: 470px;
+    -webkit-transform-origin-y: top;
+    transform: rotate(270deg);
+  }
+
+  .risk-journey__copy-stack {
+    width: 100% !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   SIGNAL LIST — Risk Journey "colorwash" panel content
+   Compact list format (title + weight + body per feature), not cards —
+   the copy-stack column is narrow (44ch max-width), so a card layout
+   with icons/padding/borders per feature wouldn't fit three of them
+   readably in one panel. Populated by app.js:populateSignalPanel().
+════════════════════════════════════════════════════════════ */
+.signal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.signal-list-item__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.signal-list-item__title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--c-text-primary);
+}
+
+.signal-list-item__weight {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--c-amber);
+  flex-shrink: 0;
+}
+
+.signal-list-item__body {
+  font-size: var(--text-xs);
+  color: var(--c-text-secondary);
+  line-height: 1.55;
+  margin-bottom: 0.5rem;
+}
+
+.signal-list-item__bar {
   height: 3px;
   background: var(--c-border);
   border-radius: 2px;
   overflow: hidden;
 }
 
-.signal-card__weight-fill {
+.signal-list-item__bar-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--c-amber-dim), var(--c-amber));
   border-radius: 2px;
-  transition: width 1.2s var(--ease-out-expo);
 }
 
 
 /* ═══════════════════════════════════════════════════════════
-   DISTRIBUTION CHART
+   LEGEND — reused by the "thresholds" Risk Journey panel
 ════════════════════════════════════════════════════════════ */
-.section--distribution { background-color: var(--c-bg-surface); }
-
-.section__chart-wrap {
-  position: relative;
-  height: 320px;
-}
-
 .legend {
   display: flex;
   flex-direction: column;
@@ -384,17 +444,25 @@ body {
   flex-shrink: 0;
 }
 
-.legend__dot--high   { background: var(--c-red); }
-.legend__dot--medium { background: var(--c-yellow); }
-.legend__dot--safe   { background: var(--c-green); }
+.legend__dot--high {
+  background: var(--c-red);
+}
+
+.legend__dot--medium {
+  background: var(--c-yellow);
+}
+
+.legend__dot--safe {
+  background: var(--c-green);
+}
 
 
-/* Profile legend — used in the new Risk Profiles section. Unlike the
-   compact risk legend above, each item includes a short description,
-   so the layout needs more vertical room per row. */
+/* Profile legend — reused by the "demographics" Risk Journey panel.
+   Each item includes a short description, so the layout needs more
+   vertical room per row than the compact risk legend above. */
 .profile-legend {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 1.25rem;
   margin-top: 1.5rem;
 }
@@ -413,9 +481,17 @@ body {
   margin-top: 0.4rem;
 }
 
-.profile-legend__dot--time-constrained { background: var(--c-violet); }
-.profile-legend__dot--disengaged       { background: var(--c-cyan); }
-.profile-legend__dot--quiet-decliner   { background: var(--c-rose); }
+.profile-legend__dot--time-constrained {
+  background: var(--c-violet);
+}
+
+.profile-legend__dot--disengaged {
+  background: var(--c-cyan);
+}
+
+.profile-legend__dot--quiet-decliner {
+  background: var(--c-rose);
+}
 
 .profile-legend__item strong {
   display: block;
@@ -431,17 +507,221 @@ body {
   max-width: 42ch;
 }
 
-.section--profiles { background-color: var(--c-bg); }
 
-.section__chart-wrap--profiles {
-  height: 280px;
+/* ═══════════════════════════════════════════════════════════
+   RISK JOURNEY — Phase 7 detail panel (click-driven)
+   Shown/hidden entirely via riskJourney.js click handlers, not part of
+   the scroll-timed crossfade sequence — see attachProfileClickHandlers().
+════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   RISK JOURNEY — detail card (click-driven, Step 5 only)
+   Lives INSIDE .risk-journey__canvas (position:relative, set above),
+   overlaying its lower portion — NOT in the left copy-stack. The left
+   panel never changes on selection, per explicit design decision.
+
+   Color-matching: button background, the profile-name heading, and the
+   "Suggested strategy" label all recolor to match the selected bubble
+   (violet/cyan/rose depending on profile). Rather than three separate
+   inline styles set from JS, riskJourney.js sets ONE CSS custom
+   property (--profile-accent-color) on the card's root element per
+   selection, and each of those three rules below just references it —
+   one write, three consumers, impossible for them to disagree.
+════════════════════════════════════════════════════════════ */
+.risk-journey__detail-card {
+  position: relative;
+  grid-area: 1 / 1;
+
+  width: 100%;
+  max-width: 60ch;
+  max-height: fit-content;
+
+  right: 0px;
+  top: 160px;
+
+  background: var(--c-bg-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 14px;
+  padding: 1.5rem 1.75rem;
+}
+
+.risk-journey__detail-close {
+  position: absolute;
+  top: 0.9rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: var(--c-text-muted);
+  font-size: var(--text-sm);
+  line-height: 1;
+  padding: 0.3rem;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.risk-journey__detail-close:hover {
+  color: var(--c-text-primary);
+}
+
+.risk-journey__detail-name {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--profile-accent-color, var(--c-text-primary));
+  margin-bottom: 1.1rem;
+  padding-right: 2rem;
+}
+
+.risk-journey__detail-risk-split {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.risk-journey__detail-risk-box {
+  flex: 1;
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.risk-journey__detail-risk-box--high {
+  border-color: rgba(232, 69, 60, 0.35);
+}
+
+.risk-journey__detail-risk-box--medium {
+  border-color: rgba(245, 200, 66, 0.35);
+}
+
+.risk-journey__detail-risk-count {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--c-text-primary);
+}
+
+.risk-journey__detail-risk-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.3rem;
+}
+
+.risk-journey__detail-risk-box--high .risk-journey__detail-risk-label {
+  color: var(--c-red);
+}
+
+.risk-journey__detail-risk-box--medium .risk-journey__detail-risk-label {
+  color: var(--c-yellow);
+}
+
+.risk-journey__detail-strategy {
+  margin-bottom: 1.4rem;
+}
+
+.risk-journey__detail-strategy-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--profile-accent-color, var(--c-amber));
+  margin-bottom: 0.5rem;
+}
+
+.risk-journey__detail-strategy-text {
+  font-size: var(--text-base);
+  color: var(--c-text-secondary);
+  line-height: 1.6;
+}
+
+.risk-journey__detail-cta {
+  width: 100%;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--c-bg);
+  background: var(--profile-accent-color, var(--c-amber));
+  border: none;
+  border-radius: 6px;
+  padding: 0.7rem 1.25rem;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.risk-journey__detail-cta:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.risk-journey__drilldown-text {
+  font-size: var(--text-sm);
+  color: var(--c-text-secondary);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.risk-journey__drilldown-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-bottom: 1rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.risk-journey__drilldown-back:hover {
+  color: var(--profile-accent-color, var(--c-amber));
+}
+
+.risk-journey__drilldown-canvas {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.risk-journey__drilldown-canvas svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+/* Individual fill color is set per-dot in JS (risk-tier color mixed
+   with the surface color, weighted by that student's score WITHIN
+   their tier — see _riskIntensityColor in riskJourney.js), never here —
+   this rule only covers what's shared across every dot regardless of
+   its color. transform-box:fill-box is required for the hover scale to
+   grow from each circle's own center rather than the SVG's (0,0)
+   origin, which is the default and wrong point for a small dot far
+   from the corner. */
+.risk-journey__drilldown-dot {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.risk-journey__drilldown-dot:hover {
+  transform: scale(1.5);
 }
 
 
 /* ═══════════════════════════════════════════════════════════
    ROSTER TABLE
 ════════════════════════════════════════════════════════════ */
-.section--roster { background-color: var(--c-bg); }
+.section--roster {
+  background-color: var(--c-bg);
+}
 
 .roster__controls {
   display: flex;
@@ -472,16 +752,43 @@ body {
   transition: all 0.15s ease;
 }
 
-.filter-btn:hover            { border-color: var(--c-amber-dim); color: var(--c-amber); }
-.filter-btn--active          { background: var(--c-amber-glow); border-color: var(--c-amber-dim); color: var(--c-amber); }
-.filter-btn--high:hover      { border-color: var(--c-red); color: var(--c-red); }
-.filter-btn--medium:hover    { border-color: var(--c-yellow); color: var(--c-yellow); }
+.filter-btn:hover {
+  border-color: var(--c-amber-dim);
+  color: var(--c-amber);
+}
+
+.filter-btn--active {
+  background: var(--c-amber-glow);
+  border-color: var(--c-amber-dim);
+  color: var(--c-amber);
+}
+
+.filter-btn--high:hover {
+  border-color: var(--c-red);
+  color: var(--c-red);
+}
+
+.filter-btn--medium:hover {
+  border-color: var(--c-yellow);
+  color: var(--c-yellow);
+}
 
 /* Profile filter buttons get their own hover colors matching the badge
    palette, so the filter group visually previews what it will show. */
-.filter-btn--time-constrained:hover { border-color: var(--c-violet); color: var(--c-violet); }
-.filter-btn--disengaged:hover       { border-color: var(--c-cyan); color: var(--c-cyan); }
-.filter-btn--quiet-decliner:hover   { border-color: var(--c-rose); color: var(--c-rose); }
+.filter-btn--time-constrained:hover {
+  border-color: var(--c-violet);
+  color: var(--c-violet);
+}
+
+.filter-btn--disengaged:hover {
+  border-color: var(--c-cyan);
+  color: var(--c-cyan);
+}
+
+.filter-btn--quiet-decliner:hover {
+  border-color: var(--c-rose);
+  color: var(--c-rose);
+}
 
 .roster__count {
   font-family: var(--font-mono);
@@ -527,7 +834,9 @@ body {
   color: var(--c-text-secondary);
 }
 
-.roster__table tbody tr:last-child td { border-bottom: none; }
+.roster__table tbody tr:last-child td {
+  border-bottom: none;
+}
 
 .roster__table tbody tr {
   transition: background 0.15s ease;
@@ -535,7 +844,9 @@ body {
   transform: translateX(-1rem);
 }
 
-.roster__table tbody tr:hover { background: var(--c-bg-elevated); }
+.roster__table tbody tr:hover {
+  background: var(--c-bg-elevated);
+}
 
 .user-id {
   font-family: var(--font-mono);
@@ -548,9 +859,17 @@ body {
   font-weight: 700;
 }
 
-.risk-score--high   { color: var(--c-red); }
-.risk-score--medium { color: var(--c-yellow); }
-.risk-score--low    { color: var(--c-green); }
+.risk-score--high {
+  color: var(--c-red);
+}
+
+.risk-score--medium {
+  color: var(--c-yellow);
+}
+
+.risk-score--low {
+  color: var(--c-green);
+}
 
 .risk-badge {
   display: inline-block;
@@ -563,9 +882,20 @@ body {
   font-weight: 700;
 }
 
-.risk-badge--HIGH   { background: rgba(232, 69, 60, 0.15); color: var(--c-red); }
-.risk-badge--MEDIUM { background: rgba(245, 200, 66, 0.15); color: var(--c-yellow); }
-.risk-badge--LOW    { background: rgba(62, 207, 142, 0.12); color: var(--c-green); }
+.risk-badge--HIGH {
+  background: rgba(232, 69, 60, 0.15);
+  color: var(--c-red);
+}
+
+.risk-badge--MEDIUM {
+  background: rgba(245, 200, 66, 0.15);
+  color: var(--c-yellow);
+}
+
+.risk-badge--LOW {
+  background: rgba(62, 207, 142, 0.12);
+  color: var(--c-green);
+}
 
 .action-text {
   font-size: var(--text-xs);
@@ -587,16 +917,237 @@ body {
   white-space: nowrap;
 }
 
-.profile-badge--time-constrained { background: rgba(155, 140, 242, 0.15); color: var(--c-violet); }
-.profile-badge--disengaged       { background: rgba(94, 201, 232, 0.15);  color: var(--c-cyan); }
-.profile-badge--quiet-decliner   { background: rgba(242, 140, 184, 0.15); color: var(--c-rose); }
-.profile-badge--default          { background: rgba(138, 143, 154, 0.15); color: var(--c-text-muted); }
+.profile-badge--time-constrained {
+  background: rgba(155, 140, 242, 0.15);
+  color: var(--c-violet);
+}
+
+.profile-badge--disengaged {
+  background: rgba(94, 201, 232, 0.15);
+  color: var(--c-cyan);
+}
+
+.profile-badge--quiet-decliner {
+  background: rgba(242, 140, 184, 0.15);
+  color: var(--c-rose);
+}
+
+.profile-badge--default {
+  background: rgba(138, 143, 154, 0.15);
+  color: var(--c-text-muted);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   RISK JOURNEY — scroll-driven dot narrative
+   ═══════════════════════════════════════════════════════════
+   PHASE 1 SCOPE: static grid layout only. Color-coding (Phase 2),
+   the metaball merge (Phase 3+), and click interactions (Phase 7+)
+   are NOT yet styled here — added incrementally as those phases land.
+════════════════════════════════════════════════════════════ */
+.section--risk-journey {
+  flex-direction: row-reverse;
+  background-color: var(--c-bg);
+  gap: 3rem;
+}
+
+.risk-journey__layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-rows: auto;
+  gap: 3rem;
+  align-items: center;
+  min-height: 70vh;
+}
+
+.risk-journey__copy-stack {
+  /* CSS grid stacking: both panels are placed in the SAME grid cell
+     (grid-area: 1 / 1 on each, below), so they overlap exactly without
+     manual position:absolute/top/left math, and the container sizes
+     itself to whichever panel is currently tallest. GSAP crossfades
+     visibility between them — see riskJourney.js. */
+  display: grid;
+}
+
+.risk-journey__copy-panel {
+  grid-area: 1 / 1;
+  align-self: start;
+}
+
+/* Resting state if GSAP never runs (load failure, JS disabled): show the
+   intro panel only, keep the other four hidden. A single non-animated
+   intro panel is a sensible degraded state; five overlapping panels
+   all fully visible would read as broken, garbled text. */
+#risk-journey-intro {
+  display: block;
+}
+
+#risk-journey-signal {
+  display: none;
+}
+
+#risk-journey-thresholds {
+  display: none;
+}
+
+#risk-journey-profiling {
+  display: none;
+}
+
+#risk-journey-demographics {
+  display: none;
+}
+
+#risk-journey-detail {
+  /* visibility: hidden; */
+  opacity: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.risk-journey__dynamic_graphs {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.risk-journey__canvas {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  grid-area: 1 / 1;
+}
+
+.risk-journey__svg {
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+}
+
+/* Phase 1 base state: neutral grey, used only as a fallback if a dot is
+   somehow missing its data-risk-label (should not happen in practice —
+   every student record always has a risk_label). Phase 2 overrides this
+   via the attribute selectors below, which win on specificity.
+
+   No CSS transition on fill here — GSAP now owns fill animation directly
+   via inline styles during the scroll-scrubbed color wash (riskJourney.js).
+   A CSS transition running alongside GSAP's per-frame scrub updates would
+   double-smooth and lag behind the scrub, since scrub already IS the
+   interpolation; the two would fight rather than compose. */
+.risk-journey__dot {
+  fill: var(--c-border);
+}
+
+/* Phase 2: color-code every dot by the SAME risk tier used everywhere
+   else on the page (roster badges, distribution chart, legend). Reuses
+   the existing --c-red/--c-yellow/--c-green tokens rather than
+   introducing new colors, so this reads as one consistent risk language
+   across the whole site, not a separate palette invented for this one
+   visualization. */
+.risk-journey__dot[data-risk-label="HIGH"] {
+  fill: var(--c-red);
+}
+
+.risk-journey__dot[data-risk-label="MEDIUM"] {
+  fill: var(--c-yellow);
+}
+
+.risk-journey__dot[data-risk-label="LOW"] {
+  fill: var(--c-green);
+}
+
+/* Cluster labels (count + profile name) that fade in above each blob
+   during the "profiles" segment of animateMainSequence. Two tspans per
+   label — count on the first line, name on the second — built
+   programmatically in _createProfileLabels, not static markup, since
+   position depends on each profile's actual blob radius (which itself
+   depends on live student counts). */
+.risk-journey__cluster-label-count {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  fill: var(--c-text-primary);
+}
+
+.risk-journey__cluster-label-name {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  fill: var(--c-text-secondary);
+}
+
+/* The three solid circles that the blobs resolve into during the
+   "resolve" segment of animateMainSequence — one per behavioral profile.
+   No stroke/border by default; fill color is set directly in JS per
+   profile (_createResolvedCircles), not here, since it depends on live
+   data (which profile, which color token). Transition on fill/stroke
+   only — never on opacity, which stays GSAP-controlled during the fade-in
+   (a CSS transition racing GSAP's own opacity tween would fight it, the
+   same lesson learned with .risk-journey__dot's fill in Phase 2/3).
+   Clickable as of Phase 7 — cursor + a subtle stroke on hover signal
+   that, without relying on opacity/scale changes that GSAP might also
+   be mid-animating during the fade-in. */
+.risk-journey__resolved-circle {
+  stroke: none;
+  cursor: pointer;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+.risk-journey__resolved-circle:hover {
+  stroke: var(--c-text-primary);
+  stroke-width: 2px;
+}
+
+.risk-journey__resolved-circle--selected {
+  stroke: var(--c-text-primary);
+  stroke-width: 3px;
+}
+
+@media (max-width: 900px) {
+  .risk-journey__layout {
+    /* grid-template-columns: 1fr;
+    gap: 2rem; */
+
+    grid-template-columns: 1fr;
+    transition: grid-template-rows 0.3s ease-in-out;
+    height: fit-content;
+    grid-auto-rows: auto;
+  }
+
+  .system-flow {
+    flex-direction: column;
+  }
+
+  .system-connector {
+    transform: rotate(90deg);
+    margin: 0.25rem 0;
+  }
+}
+
+@media (max-width: 620px) {
+  .risk-journey__progress-step {
+    width: 60px;
+  }
+
+  .risk-journey__progress-step-label {
+    text-wrap: balance;
+  }
+
+  .risk-journey__progress-track {
+    left: 145px;
+    height: 300px;
+  }
+}
 
 
 /* ═══════════════════════════════════════════════════════════
    SYSTEM FLOW
 ════════════════════════════════════════════════════════════ */
-.section--system { background-color: var(--c-bg-surface); }
+.section--system {
+  background-color: var(--c-bg-surface);
+}
 
 .system-flow {
   display: flex;
@@ -713,7 +1264,9 @@ body {
   transition: opacity 0.15s ease;
 }
 
-.tooltip[aria-hidden="false"] { opacity: 1; }
+.tooltip[aria-hidden="false"] {
+  opacity: 1;
+}
 
 .tooltip__inner {
   background: var(--c-bg-elevated);
@@ -726,32 +1279,34 @@ body {
   max-width: 240px;
   line-height: 1.6;
   white-space: pre-line;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 
 /* ═══════════════════════════════════════════════════════════
    RESPONSIVE
 ════════════════════════════════════════════════════════════ */
-@media (max-width: 900px) {
-  .signal-grid { grid-template-columns: 1fr; }
-  .section__inner--split { grid-template-columns: 1fr; }
-  .system-flow { flex-direction: column; }
-  .system-connector { transform: rotate(90deg); margin: 0.25rem 0; }
-}
-
-@media (max-width: 600px) {
-  .hero__stat-cluster { flex-direction: column; }
-}
 
 
 /* ═══════════════════════════════════════════════════════════
    REDUCED MOTION
 ════════════════════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
-  .scroll-cue__line { animation: none; }
-  .reveal-text, .signal-card, .system-node, .roster__table tbody tr {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .scroll-cue__line {
+    animation: none;
+  }
+
+  .reveal-text,
+  .system-node,
+  .roster__table tbody tr {
     opacity: 1 !important;
     transform: none !important;
   }

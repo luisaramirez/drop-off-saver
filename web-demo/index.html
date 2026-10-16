@@ -11,283 +11,275 @@
 <body>
 
   <!-- ═══════════════════════════════════════════════════════════
-       SECTION 1: HERO — the thesis
-       Opens with the single most important number.
-       "Every week, students disappear. This is the signal."
+       SECTION 1: RISK JOURNEY — the entire opening narrative
+       This is the FIRST thing on the page (hero, signal, distribution,
+       and profiles sections were removed — their content lives here
+       now, as copy panels crossfading through this section's five
+       steps).
+
+       CLICK-DRIVEN, not scroll-driven. This changed from an earlier
+       scroll-scrubbed, pinned version — that made forward/backward
+       navigation dependent on scroll gesture precision, which was hard
+       to use. Now:
+         1. LOAD-TRIGGERED ENTRANCE (animateEntranceOnLoad) — plays
+            automatically the instant the page loads, no interaction
+            needed: intro copy fades in, dots grow in. This establishes
+            Step 1's visual state.
+         2. STEP NAVIGATION (initStepNavigation / goToStep) — the
+            fixed left-side progress bar is the ONLY way to move between
+            steps, in any order, forward or backward. Clicking a step
+            number tweens every dot directly from wherever it currently
+            is to that step's target state (position, color, opacity,
+            goo filter on/off) — there is no scroll dependency anywhere
+            in this section anymore.
+
+       Copy has FIVE stacked panels sharing one grid cell (see CSS), not
+       one static block:
+         #risk-journey-intro        — Step 1
+         #risk-journey-signal       — Step 2
+         #risk-journey-thresholds   — Step 3
+         #risk-journey-profiling    — Step 4
+         #risk-journey-demographics — Step 5
+       All crossfades are driven by goToStep() in riskJourney.js, never
+       independent triggers, so copy and visuals can't drift out of
+       sync with each other.
   ════════════════════════════════════════════════════════════ -->
-  <section class="section section--hero" id="hero">
-    <div class="hero__bg-grid" aria-hidden="true"></div>
-
-    <div class="hero__content">
-      <p class="hero__eyebrow">Early Warning System</p>
-
-      <h1 class="hero__headline">
-        <span class="hero__headline-line" data-line="1">Students don't</span>
-        <span class="hero__headline-line hero__headline-line--accent" data-line="2">disappear.</span>
-        <span class="hero__headline-line" data-line="3">They fade.</span>
-      </h1>
-
-      <p class="hero__subhead">
-        The signal exists in the data — days since last login, completion
-        stalls, the silence before the drop. This system finds it two weeks
-        before withdrawal.
-      </p>
-
-      <div class="hero__stat-cluster" id="hero-stats">
-        <!-- Populated by app.js from predictions.json -->
-        <div class="stat-card stat-card--loading" id="stat-total">
-          <span class="stat-card__value" data-target="total">—</span>
-          <span class="stat-card__label">Students tracked</span>
-        </div>
-        <div class="stat-card stat-card--danger stat-card--loading" id="stat-risk">
-          <span class="stat-card__value" data-target="at_risk">—</span>
-          <span class="stat-card__label">At risk now</span>
-        </div>
-        <div class="stat-card stat-card--loading" id="stat-window">
-          <span class="stat-card__value">14d</span>
-          <span class="stat-card__label">Intervention window</span>
-        </div>
-      </div>
-
-      <div class="hero__scroll-cue" aria-hidden="true">
-        <span>Scroll to explore</span>
-        <div class="scroll-cue__line"></div>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- ═══════════════════════════════════════════════════════════
-       SECTION 2: SIGNAL — how the model reads disengagement
-  ════════════════════════════════════════════════════════════ -->
-  <section class="section section--signal" id="signal">
+  <section class="section section--risk-journey" id="risk-journey">
     <div class="section__inner">
-      <div class="section__label" aria-hidden="true">01 — The Signal</div>
+      <div class="risk-journey__layout">
 
-      <h2 class="section__heading reveal-text">
-        Three patterns predict every dropout.
-      </h2>
+        <div class="risk-journey__copy-stack">
 
-      <div class="signal-grid">
-
-        <div class="signal-card" data-signal="recency">
-          <div class="signal-card__icon">
-            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="2"/>
-              <path d="M24 12v12l8 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
+          <div class="risk-journey__copy-panel" id="risk-journey-intro">
+            <div class="section__label" aria-hidden="true">Early Warning System</div>
+            <h2 class="section__heading">
+              Students don't disappear. They fade.
+            </h2>
+            <p class="section__body">
+              <span id="risk-journey-student-count">500</span> students
+              tracked this term — one dot per student. The signal exists
+              in the data: login gaps, completion stalls, the silence
+              before the drop. This system finds it two weeks before
+              withdrawal.
+            </p>
           </div>
-          <h3 class="signal-card__title">Recency drift</h3>
-          <p class="signal-card__body">
-            Login gaps compound. A student missing one week is recoverable.
-            Missing three weeks is almost always a permanent exit.
-          </p>
-          <div class="signal-card__weight">
-            <span class="signal-card__weight-label">Model weight</span>
-            <div class="signal-card__weight-bar">
-              <div class="signal-card__weight-fill" data-weight="0.38" style="width: 0%"></div>
+
+          <div class="risk-journey__copy-panel" id="risk-journey-signal">
+            <div class="section__label" aria-hidden="true">The Signal</div>
+            <h2 class="section__heading">
+              Three patterns predict every dropout.
+            </h2>
+            <!-- Populated entirely by app.js:populateSignalPanel(), which
+                 reads feature_importances from predictions.json, ranks
+                 all 9 model features, and builds exactly the top 3 —
+                 whichever those turn out to be for the current trained
+                 model. No feature is hardcoded here; the content map
+                 living in app.js covers all 9 possible features so any
+                 combination can appear correctly. -->
+            <div class="signal-list" id="signal-list"></div>
+          </div>
+
+          <div class="risk-journey__copy-panel" id="risk-journey-thresholds">
+            <div class="section__label" aria-hidden="true">Risk Distribution</div>
+            <h2 class="section__heading">
+              Color reveals the risk.
+            </h2>
+            <p class="section__body">
+              The model assigns each student a probability score from 0
+              to 1. Students above the
+              <strong><span class="value-risk-threshold">0.60</span> threshold</strong>
+              are flagged for intervention — prioritized by severity.
+            </p>
+            <div class="legend">
+              <div class="legend__item">
+                <span class="legend__dot legend__dot--high"></span>
+                <span>High risk  ≥ <span class="value-high-cutoff">0.75</span></span>
+              </div>
+              <div class="legend__item">
+                <span class="legend__dot legend__dot--medium"></span>
+                <span>Medium risk  ≥ <span class="value-risk-threshold">0.60</span></span>
+              </div>
+              <div class="legend__item">
+                <span class="legend__dot legend__dot--safe"></span>
+                <span>Safe  &lt; <span class="value-risk-threshold">0.60</span></span>
+              </div>
             </div>
           </div>
+
+          <div class="risk-journey__copy-panel" id="risk-journey-profiling">
+            <div class="section__label" aria-hidden="true">Risk Focus</div>
+            <h2 class="section__heading">
+              Now, a closer look at who's at risk.
+            </h2>
+            <p class="section__body">
+              <span id="risk-journey-atrisk-count">90</span> students need
+              attention. Each one fits one of three behavioral profiles —
+              and each profile points to a different retention strategy.
+            </p>
+          </div>
+
+          <div class="risk-journey__copy-panel" id="risk-journey-demographics">
+            <div class="section__label" aria-hidden="true">Risk Profiles</div>
+            <h2 class="section__heading">
+              Not every at-risk student needs the same email.
+            </h2>
+            <p class="section__body">
+              At-risk students are clustered by behavioral and demographic
+              similarity into three profiles. Each one tells a different
+              story about <em>why</em> a student is disengaging.
+            </p>
+            <!-- Populated entirely by app.js:populateDemographicsPanel(),
+                 which sources each profile's description directly from a
+                 real student record in predictions.json (risk_profile
+                 .description) — never a second, hand-typed copy of text
+                 that already lives in profiler.py's RISK_PROFILES dict.
+                 This panel NEVER changes when a bubble is selected — it
+                 always shows this same overview, by explicit design
+                 decision. Selecting a bubble only affects the right side
+                 (see #risk-journey-detail below, now living inside
+                 .risk-journey__canvas, not here). -->
+            <div class="profile-legend" id="demographics-list"></div>
+          </div>
+
         </div>
 
-        <div class="signal-card" data-signal="completion">
-          <div class="signal-card__icon">
-            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <rect x="8" y="8" width="32" height="32" rx="4" stroke="currentColor" stroke-width="2"/>
-              <path d="M16 24l6 6 10-12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <h3 class="signal-card__title">Completion stall</h3>
-          <p class="signal-card__body">
-            Progress doesn't stop suddenly. It slows — then freezes.
-            Average completion below 40% is the critical threshold.
-          </p>
-          <div class="signal-card__weight">
-            <span class="signal-card__weight-label">Model weight</span>
-            <div class="signal-card__weight-bar">
-              <div class="signal-card__weight-fill" data-weight="0.31" style="width: 0%"></div>
+
+        <div class="risk-journey__dynamic_graphs" id="risk-journey-dynamic_graphs">
+
+        <div class="risk-journey__canvas" id="risk-journey-canvas">
+          <!-- SVG dot grid rendered here by riskJourney.js -->
+        </div>
+
+<!-- Click-driven, Step 5 only. Hidden by default (opacity 0),
+               shown/hidden entirely by riskJourney.js's click handlers on
+               the three resolved circles — see selectProfile() /
+               resetProfileSelection() in initStepNavigation(). Lives
+               HERE (inside the canvas, overlaying the lower portion of
+               it) rather than in the left copy-stack — the left panel
+               never changes on selection, per explicit design decision;
+               all per-profile detail is a right-side overlay instead,
+               positioned to sit beneath the selected (focused) bubble. -->
+          <div class="risk-journey__detail-card" id="risk-journey-detail">
+            <button class="risk-journey__detail-close" id="risk-journey-detail-back" aria-label="Close detail">
+              ✕
+            </button>
+
+            <!-- Overview sub-state: name, HIGH/MEDIUM split, strategy,
+                 CTA. This is what shows first when a bubble is selected.
+                 Toggled by riskJourney.js (showDrilldown/showOverview) —
+                 both sub-states live inside the SAME detail card so
+                 there's only one opacity/pointer-events lifecycle to
+                 manage for the card as a whole; the ✕ above always
+                 closes the whole card regardless of which sub-state is
+                 currently showing. -->
+            <div id="risk-journey-detail-overview">
+              <h3 class="risk-journey__detail-name" id="risk-journey-detail-name"></h3>
+
+              <div class="risk-journey__detail-risk-split">
+                <div class="risk-journey__detail-risk-box risk-journey__detail-risk-box--high">
+                  <span class="risk-journey__detail-risk-count">
+                    <span id="risk-journey-detail-high">0</span> students
+                  </span>
+                  <span class="risk-journey__detail-risk-label">High risk</span>
+                </div>
+                <div class="risk-journey__detail-risk-box risk-journey__detail-risk-box--medium">
+                  <span class="risk-journey__detail-risk-count">
+                    <span id="risk-journey-detail-medium">0</span> students
+                  </span>
+                  <span class="risk-journey__detail-risk-label">Medium risk</span>
+                </div>
+              </div>
+
+              <div class="risk-journey__detail-strategy">
+                <div class="risk-journey__detail-strategy-label" id="risk-journey-detail-strategy-label">
+                  Suggested strategy
+                </div>
+                <p class="risk-journey__detail-strategy-text" id="risk-journey-detail-strategy"></p>
+              </div>
+
+              <button class="risk-journey__detail-cta" id="risk-journey-detail-cta">
+                See detailed data
+              </button>
+            </div>
+
+            <!-- Drill-down sub-state: individual student dots for the
+                 selected profile, shaded by risk score intensity within
+                 their tier. Hidden by default — shown only after "See
+                 detailed data" is clicked. Its own back button returns
+                 to the overview sub-state above (NOT the same as the ✕,
+                 which closes the card entirely back to the 3-bubble
+                 view). Dots + tooltips are rendered/wired entirely by
+                 riskJourney.js:renderDrilldownDots(), reusing app.js's
+                 tooltip system (window.riskJourneyTooltip) rather than
+                 building a second one. -->
+            <div id="risk-journey-detail-drilldown" class="risk-journey__drilldown" hidden>
+              <button class="risk-journey__drilldown-back" id="risk-journey-drilldown-back">
+                ← Back to strategy
+              </button>
+              <h3 class="risk-journey__detail-name" id="risk-journey-drilldown-name"></h3>
+              <p class="risk-journey__drilldown-text">
+                Students in this profile, shaded by risk score intensity. Hover or tap each dot to see the details for any student.
+              </p>
+              <div class="risk-journey__drilldown-canvas" id="risk-journey-drilldown-canvas">
+                <!-- Mini SVG dot grid rendered here by riskJourney.js -->
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="signal-card" data-signal="assessment">
-          <div class="signal-card__icon">
-            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path d="M12 36L24 12l12 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M17 28h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <h3 class="signal-card__title">Assessment silence</h3>
-          <p class="signal-card__body">
-            Skipping quizzes is a leading indicator, not a lagging one.
-            Students who disengage from assessments first, drop out second.
-          </p>
-          <div class="signal-card__weight">
-            <span class="signal-card__weight-label">Model weight</span>
-            <div class="signal-card__weight-bar">
-              <div class="signal-card__weight-fill" data-weight="0.22" style="width: 0%"></div>
-            </div>
-          </div>
         </div>
+      </div>
 
+
+      <!-- Shown while at Step 5. Not scroll-related anymore — see
+           riskJourney.js:goToStep(). "Watch again" is a shortcut with
+           the exact same effect as clicking progress step 1. -->
+      <div class="risk-journey__completion" id="risk-journey-completion" aria-hidden="true">
+        <span>Click each circle for details</span>
+        <button class="risk-journey__watch-again" id="risk-journey-watch-again">
+          ↺ Watch again
+        </button>
       </div>
     </div>
+
+    <!-- Fixed to the left edge of the viewport, always visible (not
+         faded in/out at any point) — this is now the PRIMARY way to
+         navigate the five steps, not a passive progress indicator.
+         Each button jumps directly to that step via
+         riskJourney.js:goToStep(), forward or backward, in any order —
+         no scrolling involved anywhere in this section anymore. -->
+    <nav class="risk-journey__progress" id="risk-journey-progress" aria-label="Risk Journey steps">
+      <div class="risk-journey__progress-track">
+        <div class="risk-journey__progress-fill" id="risk-journey-progress-fill"></div>
+      </div>
+      <button class="risk-journey__progress-step risk-journey__progress-step--active" data-step="1">
+        <span class="risk-journey__progress-step-number">1</span>
+        <span class="risk-journey__progress-step-label">Early Warning System</span>
+      </button>
+      <button class="risk-journey__progress-step" data-step="2">
+        <span class="risk-journey__progress-step-number">2</span>
+        <span class="risk-journey__progress-step-label">The Signal</span>
+      </button>
+      <button class="risk-journey__progress-step" data-step="3">
+        <span class="risk-journey__progress-step-number">3</span>
+        <span class="risk-journey__progress-step-label">Risk Distribution</span>
+      </button>
+      <button class="risk-journey__progress-step" data-step="4">
+        <span class="risk-journey__progress-step-number">4</span>
+        <span class="risk-journey__progress-step-label">Risk Focus</span>
+      </button>
+      <button class="risk-journey__progress-step" data-step="5">
+        <span class="risk-journey__progress-step-number">5</span>
+        <span class="risk-journey__progress-step-label">Risk Profiles</span>
+      </button>
+    </nav>
   </section>
 
-
   <!-- ═══════════════════════════════════════════════════════════
-       SECTION 3: DISTRIBUTION — risk score chart
-  ════════════════════════════════════════════════════════════ -->
-  <section class="section section--distribution" id="distribution">
-    <div class="section__inner section__inner--split">
-
-      <div class="section__copy">
-        <div class="section__label" aria-hidden="true">02 — Risk Distribution</div>
-        <h2 class="section__heading reveal-text">
-          Most students are safe.<br/>
-          A few need you now.
-        </h2>
-        <p class="section__body">
-          The model assigns each student a probability score from 0 to 1.
-          Students above the <strong>0.60 threshold</strong> are flagged for
-          intervention — prioritized by severity.
-        </p>
-        <div class="legend">
-          <div class="legend__item">
-            <span class="legend__dot legend__dot--high"></span>
-            <span>High risk  ≥ 0.75</span>
-          </div>
-          <div class="legend__item">
-            <span class="legend__dot legend__dot--medium"></span>
-            <span>Medium risk  ≥ 0.60</span>
-          </div>
-          <div class="legend__item">
-            <span class="legend__dot legend__dot--safe"></span>
-            <span>Safe  &lt; 0.60</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="section__chart-wrap">
-        <canvas id="chart-distribution" role="img"
-          aria-label="Bar chart showing distribution of student risk scores"></canvas>
-      </div>
-
-    </div>
-  </section>
-
-
-  <!-- ═══════════════════════════════════════════════════════════
-       SECTION 3.5: PROFILES — risk profile breakdown
-       Bridges "how many are at risk" to "who needs the table below"
-  ════════════════════════════════════════════════════════════ -->
-  <section class="section section--profiles" id="profiles">
-    <div class="section__inner section__inner--split">
-
-      <div class="section__chart-wrap section__chart-wrap--profiles">
-        <canvas id="chart-profiles" role="img"
-          aria-label="Bar chart showing breakdown of at-risk students by behavioral profile"></canvas>
-      </div>
-
-      <div class="section__copy">
-        <div class="section__label" aria-hidden="true">02.5 — Risk Profiles</div>
-        <h2 class="section__heading reveal-text">
-          Not every at-risk student needs the same email.
-        </h2>
-        <p class="section__body">
-          At-risk students are clustered by behavioral and demographic
-          similarity into three profiles. Each one tells a different story
-          about <em>why</em> a student is disengaging — and points to a
-          different retention strategy.
-        </p>
-        <div class="profile-legend">
-          <div class="profile-legend__item">
-            <span class="profile-legend__dot profile-legend__dot--time-constrained"></span>
-            <div>
-              <strong>Time-Constrained</strong>
-              <p>Availability-driven drop-off. Often full-time workers or parents.</p>
-            </div>
-          </div>
-          <div class="profile-legend__item">
-            <span class="profile-legend__dot profile-legend__dot--disengaged"></span>
-            <div>
-              <strong>Disengaged Learner</strong>
-              <p>Passive viewing without active participation. Often younger, mobile-primary.</p>
-            </div>
-          </div>
-          <div class="profile-legend__item">
-            <span class="profile-legend__dot profile-legend__dot--quiet-decliner"></span>
-            <div>
-              <strong>Quiet Decliner</strong>
-              <p>Was engaged, recently dropped off. High investment, highly recoverable.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-
-  <!-- ═══════════════════════════════════════════════════════════
-       SECTION 4: ROSTER — the at-risk students table
-  ════════════════════════════════════════════════════════════ -->
-  <section class="section section--roster" id="roster">
-    <div class="section__inner">
-      <div class="section__label" aria-hidden="true">03 — Student Roster</div>
-      <h2 class="section__heading reveal-text">
-        The students who need intervention.
-      </h2>
-      <p class="section__body" style="margin-bottom: 1.5rem;">
-        Every at-risk student is matched to one of three behavioral profiles —
-        each with a distinct, tailored retention strategy. Not every dropout
-        risk looks the same, and the right outreach depends on knowing which
-        kind of risk you're looking at.
-      </p>
-
-      <div class="roster__controls">
-        <div class="roster__filter-group" role="group" aria-label="Filter by risk level">
-          <button class="filter-btn filter-btn--active" data-filter="all">All Risk</button>
-          <button class="filter-btn filter-btn--high" data-filter="HIGH">High</button>
-          <button class="filter-btn filter-btn--medium" data-filter="MEDIUM">Medium</button>
-        </div>
-        <div class="roster__filter-group" role="group" aria-label="Filter by risk profile">
-          <button class="filter-btn filter-btn--active" data-profile-filter="all">All Profiles</button>
-          <button class="filter-btn filter-btn--time-constrained" data-profile-filter="Time-Constrained">Time-Constrained</button>
-          <button class="filter-btn filter-btn--disengaged" data-profile-filter="Disengaged Learner">Disengaged</button>
-          <button class="filter-btn filter-btn--quiet-decliner" data-profile-filter="Quiet Decliner">Quiet Decliner</button>
-        </div>
-        <div class="roster__count" id="roster-count">
-          Showing <span id="roster-visible-count">—</span> students
-        </div>
-      </div>
-
-      <div class="roster__table-wrap" role="region" aria-label="At-risk student table" tabindex="0">
-        <table class="roster__table" id="roster-table">
-          <thead>
-            <tr>
-              <th scope="col">Student ID</th>
-              <th scope="col">Risk Score</th>
-              <th scope="col">Risk Level</th>
-              <th scope="col">Risk Profile</th>
-              <th scope="col">Suggested Strategy</th>
-            </tr>
-          </thead>
-          <tbody id="roster-tbody">
-            <!-- Populated by app.js -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- ═══════════════════════════════════════════════════════════
-       SECTION 5: SYSTEM — architecture explainer
+       SECTION 2: SYSTEM — architecture explainer
   ════════════════════════════════════════════════════════════ -->
   <section class="section section--system" id="system">
     <div class="section__inner">
-      <div class="section__label" aria-hidden="true">04 — System Design</div>
+      <div class="section__label" aria-hidden="true">System Design</div>
       <h2 class="section__heading reveal-text">
         Three layers. One contract.
       </h2>
@@ -342,6 +334,60 @@
     </div>
   </section>
 
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 3: ROSTER — the at-risk students table
+  ════════════════════════════════════════════════════════════ -->
+  <section class="section section--roster" id="roster">
+    <div class="section__inner">
+      <div class="section__label" aria-hidden="true">Student Roster</div>
+      <h2 class="section__heading reveal-text">
+        The students who need intervention.
+      </h2>
+      <p class="section__body" style="margin-bottom: 1.5rem;">
+        Every at-risk student is matched to one of three behavioral profiles —
+        each with a distinct, tailored retention strategy. Not every dropout
+        risk looks the same, and the right outreach depends on knowing which
+        kind of risk you're looking at.
+      </p>
+
+      <div class="roster__controls">
+        <div class="roster__filter-group" role="group" aria-label="Filter by risk level">
+          <button class="filter-btn filter-btn--active" data-filter="all">All Risk</button>
+          <button class="filter-btn filter-btn--high" data-filter="HIGH">High</button>
+          <button class="filter-btn filter-btn--medium" data-filter="MEDIUM">Medium</button>
+        </div>
+        <div class="roster__filter-group" role="group" aria-label="Filter by risk profile">
+          <button class="filter-btn filter-btn--active" data-profile-filter="all">All Profiles</button>
+          <button class="filter-btn filter-btn--time-constrained" data-profile-filter="Time-Constrained">Time-Constrained</button>
+          <button class="filter-btn filter-btn--disengaged" data-profile-filter="Disengaged Learner">Disengaged</button>
+          <button class="filter-btn filter-btn--quiet-decliner" data-profile-filter="Quiet Decliner">Quiet Decliner</button>
+        </div>
+        <div class="roster__count" id="roster-count">
+          Showing <span id="roster-visible-count">—</span> students
+        </div>
+      </div>
+
+      <div class="roster__table-wrap" role="region" aria-label="At-risk student table" tabindex="0">
+        <table class="roster__table" id="roster-table">
+          <thead>
+            <tr>
+              <th scope="col">Student ID</th>
+              <th scope="col">Risk Score</th>
+              <th scope="col">Risk Level</th>
+              <th scope="col">Risk Profile</th>
+              <th scope="col">Suggested Strategy</th>
+            </tr>
+          </thead>
+          <tbody id="roster-tbody">
+            <!-- Populated by app.js -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+
+
 
   <!-- ═══════════════════════════════════════════════════════════
        FOOTER
@@ -352,7 +398,7 @@
         Drop-off Saver — ML System Design Portfolio
       </p>
       <p class="footer__meta">
-        Random Forest · Scikit-Learn · GSAP · Chart.js ·
+        Random Forest · Scikit-Learn · GSAP ·
         <span id="footer-generated-at">—</span>
       </p>
     </div>
@@ -363,19 +409,17 @@
     <div class="tooltip__inner" id="tooltip-content"></div>
   </div>
 
-  <!-- Chart.js + GSAP loaded synchronously (no defer) at the end of body.
-       app.js and charts.js depend on both being fully evaluated before
-       they run — loading them here, in this order, guarantees that
-       without needing window.onload gating. -->
-       
-  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js"></script> -->
-  <script src="js/chart.umd.min.js"></script>
-
-  <!-- GSAP + ScrollTrigger -->
+  <!-- GSAP loaded synchronously (no defer) at the end of body. app.js and
+       riskJourney.js depend on it being fully evaluated before they run —
+       loading it here, in this order, guarantees that without needing
+       window.onload gating. Chart.js is no longer used anywhere on the
+       page (the distribution/profile charts were removed in favor of the
+       Risk Journey narrative) — charts.js is correspondingly unreferenced
+       and can be deleted from web-demo/js/ if desired. -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
-  <script src="js/charts.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/riskJourney.js"></script>
 </body>
 </html>

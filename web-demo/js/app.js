@@ -1,14 +1,19 @@
 /**
- * app.js — GSAP Scroll Narrative Orchestrator
+ * app.js — Page Copy & Roster Orchestrator
  * ============================================
- * Consumes predictions.json and drives all scroll-triggered animations.
+ * Consumes predictions.json and populates all TEXT content across the
+ * page — including the Risk Journey section's copy panels — plus the
+ * roster table.
  *
  * Data flow:
  *   fetch("assets/predictions.json")
- *     → populate hero stats (counter animation)
+ *     → populate Risk Journey copy panels (student counts, thresholds,
+ *       signal features, demographics — populateNarrativeCopy /
+ *       populateSignalPanel / populateDemographicsPanel)
  *     → populate roster table (staggered row reveal)
- *     → pass risk distribution data to charts.js
- *     → GSAP ScrollTrigger wires each section's entrance animation
+ *     → GSAP ScrollTrigger wires the Roster and System sections' reveal
+ *       (Risk Journey's own entrance + pinned sequence live in
+ *       riskJourney.js, not here — see that file for why)
  *
  * This module has one external dependency: predictions.json.
  * It knows nothing about Python, sklearn, or how scores were computed.
@@ -32,6 +37,94 @@ const SIGNAL_LABEL_MAP = {
   participation_gap:              "Participation gap",
 };
 
+/**
+ * Content for every possible feature the model can rank as top-3.
+ * populateSignalPanel() sorts feature_importances descending and builds
+ * list items ONLY for whichever 3 keys come out on top for the current
+ * trained model — this map has to cover all 9 possible features (not
+ * just 3) since a retrain on a different dataset can shift which ones
+ * matter most.
+ *
+ * The `icon` field is currently UNUSED — the Signal section moved from
+ * a card layout (which had room for icons) to a compact list inside the
+ * Risk Journey copy-stack (narrow column, no room for icons alongside
+ * title/weight/body for three features at once). Left in place rather
+ * than deleted, in case a future layout has room for them again.
+ */
+const SIGNAL_CONTENT_MAP = {
+  days_since_last_login: {
+    title: "Recency drift",
+    body: "Login gaps compound. A student missing one week is recoverable. Missing three weeks is almost always a permanent exit.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="2"/>
+      <path d="M24 12v12l8 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>`,
+  },
+  avg_completion_rate: {
+    title: "Completion stall",
+    body: "Progress doesn't stop suddenly. It slows — then freezes. A stalled completion rate is a critical early warning.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="8" y="8" width="32" height="32" rx="4" stroke="currentColor" stroke-width="2"/>
+      <path d="M16 24l6 6 10-12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`,
+  },
+  assessment_participation_ratio: {
+    title: "Assessment silence",
+    body: "Skipping quizzes is a leading indicator, not a lagging one. Students who disengage from assessments first, drop out second.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M12 36L24 12l12 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M17 28h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>`,
+  },
+  forum_posts_last_30d: {
+    title: "Community silence",
+    body: "Forum activity is a low-effort signal of belonging. When it disappears entirely, the course has often stopped feeling like a place to show up for.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M10 12h28a2 2 0 012 2v16a2 2 0 01-2 2H24l-8 8v-8h-6a2 2 0 01-2-2V14a2 2 0 012-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`,
+  },
+  video_watch_ratio: {
+    title: "Passive viewing",
+    body: "Watching drops off more slowly than testing does. By the time video consumption falls too, disengagement is usually already advanced.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="2"/>
+      <path d="M20 16l12 8-12 8z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+    </svg>`,
+  },
+  streak_days: {
+    title: "Broken streak",
+    body: "A long streak is momentum — students protect it. Once broken, there's no habit left pulling them back to the course tomorrow.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M24 8c-1 6-9 10-9 19a9 9 0 0018 0c0-3-1-5-3-7-1 3-3 4-4 4 1-6-1-11-2-16z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`,
+  },
+  engagement_score: {
+    title: "Composite engagement",
+    body: "No single signal tells the whole story. This blended score weighs completion, assessments, video, and community activity into one number.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M8 32a16 16 0 0132 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M24 32l7-9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="24" cy="32" r="2.5" stroke="currentColor" stroke-width="2"/>
+    </svg>`,
+  },
+  recency_penalty: {
+    title: "Accelerating absence",
+    body: "The cost of being away isn't linear. Each additional day gone matters more than the last — risk compounds, it doesn't just add up.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M8 14c8 1 13 6 15 12s6 10 12 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M29 30l6 6m0 0v-6m0 6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`,
+  },
+  participation_gap: {
+    title: "Watching without testing",
+    body: "Some students keep consuming content while quietly opting out of being evaluated. That gap between watching and testing is often the earliest tell.",
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M16 32V16m0 0l-5 5m5-5l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M32 16v16m0 0l-5-5m5 5l5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`,
+  },
+};
+
 // ---------------------------------------------------------------------------
 // Data ingestion
 // ---------------------------------------------------------------------------
@@ -53,43 +146,6 @@ async function loadPredictions() {
     throw new Error("predictions.json is missing required fields: students, summary.");
   }
   return data;
-}
-
-// ---------------------------------------------------------------------------
-// Hero stats — animated counters
-// ---------------------------------------------------------------------------
-
-/**
- * Animates a numeric counter from 0 to targetValue using GSAP.
- * @param {HTMLElement} el  - The element to update
- * @param {number} target   - The final value
- * @param {number} decimals - Decimal places (default 0)
- */
-function animateCounter(el, target, decimals = 0) {
-  const obj = { val: 0 };
-  gsap.to(obj, {
-    val: target,
-    duration: 1.8,
-    ease: "power3.out",
-    onUpdate() {
-      el.textContent = decimals > 0
-        ? obj.val.toFixed(decimals)
-        : Math.round(obj.val).toLocaleString();
-    },
-  });
-}
-
-function populateHeroStats(summary) {
-  const statTotal = document.getElementById("stat-total");
-  const statRisk  = document.getElementById("stat-risk");
-
-  document.querySelectorAll(".stat-card").forEach((card) => {
-    card.classList.remove("stat-card--loading");
-    card.classList.add("stat-card--loaded");
-  });
-
-  animateCounter(statTotal.querySelector(".stat-card__value"), summary.total_students);
-  animateCounter(statRisk.querySelector(".stat-card__value"),  summary.at_risk_count);
 }
 
 // ---------------------------------------------------------------------------
@@ -261,6 +317,20 @@ function hideTooltip() {
   tooltip.setAttribute("aria-hidden", "true");
 }
 
+// Exposed globally so riskJourney.js's student drill-down dots can reuse
+// this EXACT tooltip system — same DOM element, same content format as
+// the roster table rows. There is only one #tooltip element on the page;
+// having two independent JS modules each build their own would either
+// require a second DOM element (visually inconsistent, more markup to
+// keep in sync) or silently fight over this one (last mouseover wins,
+// unpredictably). One owner, two callers, is the simpler structure.
+window.riskJourneyTooltip = {
+  show: showTooltip,
+  move: moveTooltip,
+  hide: hideTooltip,
+  buildContent: _buildTooltipContent,
+};
+
 // ---------------------------------------------------------------------------
 // GSAP — ScrollTrigger animations
 // ---------------------------------------------------------------------------
@@ -268,23 +338,13 @@ function hideTooltip() {
 function initScrollAnimations() {
   gsap.registerPlugin(ScrollTrigger);
 
-  // --- Hero entrance ---
-  const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-
-  tl.to(".hero__eyebrow", { opacity: 1, y: 0, duration: 0.7 })
-    .from(".hero__headline-line", {
-      yPercent: 110,
-      stagger: 0.12,
-      duration: 0.9,
-      ease: "power4.out",
-    }, "-=0.3")
-    .to(".hero__subhead", { opacity: 1, y: 0, duration: 0.7 }, "-=0.4")
-    .to(".hero__scroll-cue", { opacity: 1, duration: 0.5 }, "-=0.1");
-
-  // Hero stat cards stagger in after data loads (triggered via JS after fetch)
-  gsap.set(".stat-card", { opacity: 0, y: 20 });
-
   // --- Section headings (scroll-triggered) ---
+  // Still used by the Roster and System sections, which are untouched.
+  // The Risk Journey section's own headings are NOT in this list — its
+  // entrance is a load-triggered timeline owned by riskJourney.js
+  // (animateEntranceOnLoad), and its later panels crossfade via that
+  // same file's pinned main sequence, neither of which needs this
+  // generic scroll-into-view reveal.
   document.querySelectorAll(".reveal-text").forEach((el) => {
     gsap.to(el, {
       scrollTrigger: { trigger: el, start: "top 80%", once: true },
@@ -293,21 +353,6 @@ function initScrollAnimations() {
       duration: 0.8,
       ease: "power3.out",
     });
-  });
-
-  // --- Signal cards stagger ---
-  gsap.to(".signal-card", {
-    scrollTrigger: {
-      trigger: ".signal-grid",
-      start: "top 75%",
-      once: true,
-    },
-    opacity: 1,
-    y: 0,
-    stagger: 0.12,
-    duration: 0.7,
-    ease: "power3.out",
-    onComplete: animateWeightBars,
   });
 
   // --- System nodes stagger ---
@@ -322,22 +367,6 @@ function initScrollAnimations() {
     stagger: 0.15,
     duration: 0.7,
     ease: "power3.out",
-  });
-}
-
-/**
- * Animates the feature importance weight bars on the signal cards.
- * Width targets are set via data-weight attributes in the HTML.
- */
-function animateWeightBars() {
-  document.querySelectorAll(".signal-card__weight-fill").forEach((bar) => {
-    const weight = parseFloat(bar.dataset.weight || 0);
-    gsap.to(bar, {
-      width: `${weight * 100}%`,
-      duration: 1.0,
-      ease: "power3.out",
-      delay: 0.1,
-    });
   });
 }
 
@@ -361,16 +390,180 @@ function animateRosterRows() {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Narrative copy — dynamic placeholders
+// ---------------------------------------------------------------------------
+
 /**
- * Animates hero stat cards in after data is loaded.
+ * Replaces every hardcoded numeric claim in the page's static copy with
+ * the live value from predictions.json. Without this, retraining on a
+ * differently-sized dataset (e.g. regenerating students.csv with 700 rows
+ * instead of 500) silently leaves stale numbers sitting in the HTML —
+ * "500 students tracked", feature-importance percentages, and risk
+ * threshold values would all describe a dataset that no longer exists.
+ *
+ * Threshold values use a BROADCAST pattern: rather than one `id` per
+ * element (which needs new JS wiring every time the same number appears
+ * in a new place — e.g. once in the Distribution legend, then again in
+ * the Risk Journey legend), elements share a class (.value-risk-threshold,
+ * .value-high-cutoff) and every matching element on the page gets updated
+ * in one querySelectorAll pass. Adding a third or fourth legend elsewhere
+ * later requires zero changes here — just reuse the same class in HTML.
+ *
+ * @param {object} data - Full predictions.json payload
  */
-function animateStatCards() {
-  gsap.to(".stat-card", {
-    opacity: 1,
-    y: 0,
-    stagger: 0.12,
-    duration: 0.7,
-    ease: "power3.out",
+function populateNarrativeCopy(data) {
+  // --- Risk Journey section: total student count ---
+  const journeyCount = document.getElementById("risk-journey-student-count");
+  if (journeyCount) {
+    journeyCount.textContent = data.summary.total_students.toLocaleString();
+  }
+
+  // --- Risk Journey section: at-risk count (profiling-framing panel) ---
+  const journeyAtRiskCount = document.getElementById("risk-journey-atrisk-count");
+  if (journeyAtRiskCount) {
+    journeyAtRiskCount.textContent = data.summary.at_risk_count.toLocaleString();
+  }
+
+  // --- Risk threshold values: broadcast to every instance on the page ---
+  // data.threshold is the configurable RISK_THRESHOLD (env var in notifier.py).
+  // data.high_risk_cutoff is HIGH_RISK_CUTOFF — technically a fixed constant
+  // today, but exported rather than hardcoded so the HTML never silently
+  // drifts from the Python source of truth if that constant ever changes.
+  const thresholdFormatted = data.threshold.toFixed(2);
+  const highCutoffFormatted = data.high_risk_cutoff.toFixed(2);
+
+  document.querySelectorAll(".value-risk-threshold").forEach((el) => {
+    el.textContent = thresholdFormatted;
+  });
+
+  document.querySelectorAll(".value-high-cutoff").forEach((el) => {
+    el.textContent = highCutoffFormatted;
+  });
+}
+
+/**
+ * Builds the Risk Journey "signal" panel's content entirely from
+ * feature_importances, rather than relying on hardcoded HTML. This
+ * exists because a retrain on a different-sized dataset can change not
+ * just the WEIGHT PERCENTAGES shown, but which 3 features are actually
+ * most predictive — a hardcoded "Completion stall" entry is misleading
+ * if avg_completion_rate has dropped out of the true top 3 for the
+ * current model. Rebuilding from a full content map (SIGNAL_CONTENT_MAP,
+ * covering all 9 possible features) keeps the claim "these are the three
+ * most influential variables" honest regardless of dataset size or retrain.
+ *
+ * Compact list format, not cards — the copy-stack column is narrow
+ * (44ch max-width) and needs to show all three features' full info
+ * (title, body, weight) simultaneously in one panel, unlike the old
+ * Signal section which had a full-width row to spread 3 cards across.
+ *
+ * This panel's VISIBILITY (when it fades in/out) is controlled entirely
+ * by riskJourney.js's shared pinned timeline — this function only ever
+ * builds its CONTENT, once, when data first loads.
+ *
+ * @param {object} data - Full predictions.json payload
+ */
+function populateSignalPanel(data) {
+  const container = document.getElementById("signal-list");
+  if (!container || !data.feature_importances) return;
+
+  // Rank all features by importance, descending, and take the top 3.
+  const ranked = Object.entries(data.feature_importances).sort(
+    (a, b) => b[1] - a[1]
+  );
+  const top3 = ranked.slice(0, 3);
+
+  container.innerHTML = "";
+
+  top3.forEach(([featureKey, importance]) => {
+    const content = SIGNAL_CONTENT_MAP[featureKey];
+    if (!content) {
+      // Defensive fallback: a feature the model ranked highly but that
+      // isn't in the content map yet (e.g. a brand-new engineered feature
+      // added to features.py without a matching entry written here).
+      console.warn(
+        `[Drop-off Saver] No SIGNAL_CONTENT_MAP entry for "${featureKey}" — skipping.`
+      );
+      return;
+    }
+
+    const item = document.createElement("div");
+    item.className = "signal-list-item";
+    item.dataset.signal = featureKey;
+    // Weight bar width is set directly here, not animated — by the time
+    // this panel's opacity crossfades to visible (during the "colorwash"
+    // segment, much later), the bar is already at its correct width, so
+    // there's no separate "fill" moment for the viewer to see anyway.
+    item.innerHTML = `
+      <div class="signal-list-item__header">
+        <span class="signal-list-item__title">${content.title}</span>
+        <span class="signal-list-item__weight">${Math.round(importance * 100)}%</span>
+      </div>
+      <p class="signal-list-item__body">${content.body}</p>
+      <div class="signal-list-item__bar">
+        <div class="signal-list-item__bar-fill" style="width: ${(importance * 100).toFixed(0)}%"></div>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+}
+
+/**
+ * Builds the Risk Journey "demographics" panel's content by sourcing
+ * each profile's description directly from a real student record in
+ * predictions.json (student.risk_profile.description) — never a second,
+ * hand-typed copy of text that already lives in profiler.py's
+ * RISK_PROFILES dict. If that text ever changes in profiler.py, this
+ * panel picks up the new wording automatically on the next data refresh,
+ * with no matching manual edit required here.
+ *
+ * PROFILE_ORDER is a display-order choice (left-to-right narrative
+ * flow), not "data" — it's fine for this to be a fixed constant, unlike
+ * the description text itself.
+ *
+ * @param {object} data - Full predictions.json payload
+ */
+const PROFILE_ORDER = ["Time-Constrained", "Disengaged Learner", "Quiet Decliner"];
+const PROFILE_DOT_CLASS_MAP = {
+  "Time-Constrained": "profile-legend__dot--time-constrained",
+  "Disengaged Learner": "profile-legend__dot--disengaged",
+  "Quiet Decliner": "profile-legend__dot--quiet-decliner",
+};
+
+function populateDemographicsPanel(data) {
+  const container = document.getElementById("demographics-list");
+  if (!container) return;
+
+  // Find one sample student per profile label — every student sharing a
+  // label has identical description text (it's set once per cluster in
+  // profiler.py), so the first match found is sufficient.
+  const descriptionsByLabel = {};
+  for (const student of data.students) {
+    if (!student.risk_profile) continue;
+    const label = student.risk_profile.label;
+    if (!descriptionsByLabel[label]) {
+      descriptionsByLabel[label] = student.risk_profile.description;
+    }
+  }
+
+  container.innerHTML = "";
+
+  PROFILE_ORDER.forEach((label) => {
+    const description = descriptionsByLabel[label];
+    if (!description) return; // profile absent from current dataset — skip gracefully
+
+    const item = document.createElement("div");
+    item.className = "profile-legend__item";
+    const dotClass = PROFILE_DOT_CLASS_MAP[label] || "";
+    item.innerHTML = `
+      <span class="profile-legend__dot ${dotClass}"></span>
+      <div>
+        <strong>${label}</strong>
+        <p>${description}</p>
+      </div>
+    `;
+    container.appendChild(item);
   });
 }
 
@@ -402,29 +595,27 @@ async function boot() {
     const data = await loadPredictions();
 
     // Populate UI
-    populateHeroStats(data.summary);
-    animateStatCards();
+    populateNarrativeCopy(data);
+    populateSignalPanel(data);
+    populateDemographicsPanel(data);
 
     populateRoster(data.students);
     animateRosterRows();
 
     populateFooter(data.generated_at);
 
-    // Pass data to chart module (charts.js exposes window.renderCharts)
-    if (typeof window.renderCharts === "function") {
-      window.renderCharts(data);
-    }
-
   } catch (err) {
     console.error("[Drop-off Saver]", err.message);
 
-    // Graceful degradation: show a visible error for the demo context
-    const heroContent = document.querySelector(".hero__content");
-    if (heroContent) {
+    // Graceful degradation: show a visible error for the demo context.
+    // Anchored to the Risk Journey intro panel now — the hero section
+    // (previously used as the error anchor) no longer exists.
+    const introPanel = document.getElementById("risk-journey-intro");
+    if (introPanel) {
       const errorEl = document.createElement("div");
       errorEl.style.cssText = "margin-top:2rem;padding:1rem 1.25rem;border:1px solid #e8453c;border-radius:6px;font-family:monospace;font-size:0.8rem;color:#e8453c;max-width:60ch;";
       errorEl.textContent = `⚠ ${err.message}`;
-      heroContent.appendChild(errorEl);
+      introPanel.appendChild(errorEl);
     }
   }
 }

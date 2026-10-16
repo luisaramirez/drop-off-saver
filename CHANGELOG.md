@@ -38,3 +38,22 @@ This new file is the second ML layer of our pipeline. Clustering at-risk student
 Now, every at-risk student has a complete risk_profile object (label, description, suggested_strategy), what we will use to design a UI/UX that reflects data findings properly in V4.
 
 ---
+
+## [In progress] Version 4
+
+Now that we have everything in terms of data, we can work on enhancing the visual narrative we use to display our findings.
+The goal is to use visual elements/shapes to represent students and the data we know about them (Risk level and profile) in a cohesive interactive story.
+
+**Work done:**
+  - Adding riskJourney.js to fetch data from predictions.json and begin creating UI elements to represent it.
+  - Modifying notifier.py in the intelligence layer with dynamic values for high_risk_cutoff.
+  - Updating the front-end (index.html, main.css and app.js) to display the proposed interactive visual narrative, as well as replacing all hardcoded values with dynamic placeholders that represent real data from our CSV source of truth.
+  - Defining scroll zones for the dots grid entrance and coloring animations
+  - Test-metaball HTML and JS files added as a separate module to test the dots animation before full integration.
+  - Merge tested blob animation into the actual scroll motion to go from a dot grid into two circular shapes (safe and at-risk students).
+  - Clean up the UI to allow better storytelling, keeping the Risk-journey scroll-driven narrative and removing all the duplicated information in other sections.
+  - Added a second layer of interactivity that allows the user to inspect each of the three risk profiles data detail separatedly.
+  - Scrolling replaced by progress-bar buttons to allow a smoother interaction between the process steps.
+  - Re-arrangement of the risk profiles screen information to improve readability and user's feedback.
+  - Error handling of overlapping areas across the whole interaction.
+  - Mobile layout polished.
